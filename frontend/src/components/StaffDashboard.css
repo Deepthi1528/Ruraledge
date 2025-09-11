@@ -1,0 +1,508 @@
+/* ================= DASHBOARD CONTAINER ================= */
+.dashboard {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5f7fa;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
+/* ================= SIDEBAR ================= */
+.sidebar {
+  width: 250px;
+  background-color: #003366;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 15px;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+}
+
+/* Logo Container */
+.logo-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 25px;
+}
+
+.dashboard-logo {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  object-fit: contain;
+  background-color: #003366;
+  padding: 6px;
+  border: 3px solid #00b4d8;
+}
+
+.logo-container span {
+  font-size: 20px;
+  font-weight: bold;
+  color: white;
+}
+
+/* Sidebar Navigation */
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar li {
+  padding: 12px 14px;
+  margin: 6px 0;
+  color: white;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.sidebar li:hover {
+  background-color: #00509e;
+}
+
+.sidebar .active-tab {
+  background-color: #28a745;
+  font-weight: bold;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Logout Button */
+.sidebar button {
+  margin-top: auto;
+  padding: 10px 15px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: bold;
+  transition: background 0.3s ease;
+}
+
+.sidebar button:hover {
+  background-color: #c82333;
+}
+
+/* ================= MAIN CONTENT ================= */
+.main-content {
+  flex: 1;
+  margin-left: 270px;
+  padding: 30px;
+  background-color: #fff;
+  min-height: 100vh;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.welcome-message h2 {
+  font-size: 24px;
+  margin-bottom: 15px;
+  color: #003366;
+  font-weight: bold;
+}
+
+/* ================= TABLE STYLING ================= */
+.complaints table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background-color: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+}
+
+.complaints th,
+.complaints td {
+  padding: 12px;
+  text-align: center;
+  font-size: 14px;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.complaints th {
+  background-color: #003366;
+  color: white;
+  font-weight: bold;
+  font-size: 15px;
+}
+
+.complaints tr:hover {
+  background-color: #f1faff;
+  transition: 0.3s;
+}
+
+.complaints td img {
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+/* ================= MODAL BACKDROP ================= */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+/* ================= PREMIUM MODAL ================= */
+.modal {
+  background-color: #fff;
+  padding: 25px 30px;
+  border-radius: 14px;
+  max-width: 600px;
+  width: 95%;
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.3s ease-in-out;
+  max-height: 85vh;
+  overflow-y: auto;
+  border: 2px solid #003366;
+}
+
+/* Modal Heading */
+.modal h3 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #003366;
+  font-weight: bold;
+  text-align: center;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #eaeaea;
+}
+
+/* Complaint Info Section */
+.modal .complaint-info {
+  background-color: #f8faff;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #e6e6e6;
+  margin-bottom: 15px;
+}
+
+.modal .complaint-info p {
+  margin: 6px 0;
+  font-size: 14px;
+  color: #444;
+}
+
+.modal .complaint-info strong {
+  color: #003366;
+}
+
+/* ================= FORM STYLING ================= */
+.modal form {
+  background-color: #ffffff;
+  padding: 18px;
+  border: 1px solid #e6e6e6;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 10px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+.modal label {
+  font-weight: bold;
+  color: #003366;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.modal textarea {
+  resize: none;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  min-height: 100px;
+  background-color: #fff;
+}
+
+.modal input[type="file"] {
+  padding: 6px;
+  border-radius: 6px;
+  background-color: #f8f9fa;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+/* Submit Button */
+.modal button[type="submit"] {
+  padding: 12px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.modal button[type="submit"]:hover {
+  background-color: #218838;
+}
+
+/* Close Button */
+.close-btn {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 100%;
+  font-weight: bold;
+}
+
+.close-btn:hover {
+  background-color: #c82333;
+}
+
+/* ================= HISTORY STYLING ================= */
+.history {
+  list-style: none;
+  padding: 0;
+  margin-top: 15px;
+}
+
+.history li {
+  padding: 8px;
+  background: #f8f9fa;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  border-left: 4px solid #003366;
+  font-size: 14px;
+}
+
+/* ================= CALENDAR STYLING ================= */
+.react-calendar {
+  width: 100%;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 15px;
+  margin-top: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.react-calendar__tile--now {
+  background: #28a745 !important;
+  color: white !important;
+  border-radius: 6px;
+}
+
+.react-calendar__tile--active {
+  background: #003366 !important;
+  color: white !important;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 992px) {
+  .dashboard {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 10px;
+    position: relative;
+  }
+
+  .main-content {
+    margin-left: 0;
+    margin-top: 15px;
+    padding: 20px;
+  }
+
+  .complaints td img {
+    width: 55px;
+    height: 55px;
+  }
+}
+
+/* ================= ANIMATIONS ================= */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* ================= MODAL BACKDROP ================= */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  backdrop-filter: blur(3px);
+}
+
+/* ================= CENTERED MODAL ================= */
+.modal {
+  background: #fff;
+  padding: 25px 30px;
+  border-radius: 14px;
+  max-width: 600px;
+  width: 95%;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.25);
+  animation: fadeIn 0.3s ease-in-out;
+  max-height: 85vh;
+  overflow-y: auto;
+  border: 2px solid #003366;
+  position: relative;
+}
+
+/* Modal Heading */
+.modal h3 {
+  font-size: 22px;
+  margin-bottom: 15px;
+  color: #003366;
+  font-weight: bold;
+  text-align: center;
+  border-bottom: 2px solid #eaeaea;
+  padding-bottom: 8px;
+}
+
+/* ================= COMPLAINT INFO ================= */
+.modal .complaint-info {
+  background: #ffffff;  /* ✅ pure white for readability */
+  padding: 15px 18px;
+  border-radius: 10px;
+  border: 1px solid #e6e6e6;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.modal .complaint-info p {
+  margin: 6px 0;
+  font-size: 14px;
+  color: #333;  /* ✅ dark gray for visibility */
+}
+
+.modal .complaint-info strong {
+  color: #003366;  /* ✅ headings in blue */
+}
+
+/* ================= FORM STYLING ================= */
+.modal form {
+  background: #ffffff;
+  padding: 18px;
+  border: 1px solid #e6e6e6;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 10px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+}
+
+.modal label {
+  font-weight: bold;
+  color: #003366;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.modal textarea {
+  resize: none;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  min-height: 100px;
+  background: #fff;
+  width: 100%;
+}
+
+.modal input[type="file"] {
+  padding: 6px;
+  border-radius: 6px;
+  background: #f8f9fa;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+/* ================= BUTTONS ================= */
+.modal button[type="submit"] {
+  padding: 12px;
+  background: linear-gradient(90deg, #007bff, #0056b3);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.modal button[type="submit"]:hover {
+  background: linear-gradient(90deg, #0056b3, #004085);
+  transform: scale(1.03);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.close-btn {
+  margin-top: 15px;
+  padding: 12px;
+  background: linear-gradient(90deg, #dc3545, #c82333);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 100%;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: linear-gradient(90deg, #c82333, #a71d2a);
+  transform: scale(1.03);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+/* ================= ANIMATIONS ================= */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -1,0 +1,73 @@
+.register-container {
+  max-width: 500px;
+  margin: 30px auto;
+  padding: 25px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+  font-family: 'Arial', sans-serif;
+}
+
+.register-container h2 {
+  color: #003366;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.register-container label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: #333;
+}
+
+.register-container input,
+.register-container select {
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.register-container select {
+  background-color: #fff;
+}
+
+.register-container button {
+  width: 100%;
+  padding: 12px;
+  background-color: #28a745;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.register-container button:hover {
+  background-color: #218838;
+}
+
+.register-container button:disabled {
+  background-color: #a1d6a1;
+  cursor: not-allowed;
+}
+
+.register-container .message {
+  margin-top: 15px;
+  text-align: center;
+  font-weight: bold;
+  color: #dc3545; /* error message color */
+}
+
+@media (max-width: 600px) {
+  .register-container {
+    padding: 20px;
+    margin: 20px;
+  }
+}
