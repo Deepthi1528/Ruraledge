@@ -22,12 +22,11 @@
   z-index: 10;
 }
 
-/* Logo Container */
+/* Logo */
 .logo-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 12px;
   margin-bottom: 25px;
 }
@@ -48,52 +47,6 @@
   color: white;
 }
 
-/* Sidebar Navigation */
-.sidebar ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.sidebar li {
-  padding: 12px 14px;
-  margin: 6px 0;
-  color: white;
-  font-size: 15px;
-  font-weight: 500;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.sidebar li:hover {
-  background-color: #00509e;
-}
-
-.sidebar .active-tab {
-  background-color: #28a745;
-  font-weight: bold;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
-}
-
-/* Logout Button */
-.sidebar button {
-  margin-top: auto;
-  padding: 10px 15px;
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 15px;
-  font-weight: bold;
-  transition: background 0.3s ease;
-}
-
-.sidebar button:hover {
-  background-color: #c82333;
-}
-
 /* ================= MAIN CONTENT ================= */
 .main-content {
   flex: 1;
@@ -103,7 +56,6 @@
   min-height: 100vh;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  animation: fadeIn 0.3s ease-in-out;
 }
 
 .welcome-message h2 {
@@ -113,396 +65,155 @@
   font-weight: bold;
 }
 
-/* ================= TABLE STYLING ================= */
+/* ================= COMPLAINT TABLE ================= */
 .complaints table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
-  background-color: #fff;
+  background: #fff;
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
 }
 
-.complaints th,
-.complaints td {
+.complaints th {
+  background: #003366;
+  color: #fff;
   padding: 12px;
-  text-align: center;
-  font-size: 14px;
-  border-bottom: 1px solid #e6e6e6;
+  text-align: left;
 }
 
-.complaints th {
-  background-color: #003366;
-  color: white;
-  font-weight: bold;
-  font-size: 15px;
+.complaints td {
+  padding: 12px;
+  border-bottom: 1px solid #e6e6e6;
+  color: #333;
 }
 
 .complaints tr:hover {
-  background-color: #f1faff;
-  transition: 0.3s;
+  background: #f1faff;
 }
 
-.complaints td img {
-  width: 70px;
-  height: 70px;
-  object-fit: cover;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-}
-
-/* ================= MODAL BACKDROP ================= */
 .modal-backdrop {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   background: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
-  align-items: center;
-  z-index: 2000;
+  align-items: center;   /* Center modal vertically */
+  z-index: 1000;
 }
 
-/* ================= PREMIUM MODAL ================= */
 .modal {
-  background-color: #fff;
+  background: #fff;
   padding: 25px 30px;
   border-radius: 14px;
-  max-width: 600px;
-  width: 95%;
-  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.3);
-  animation: fadeIn 0.3s ease-in-out;
-  max-height: 85vh;
+  max-width: 800px;
+  width: 90%;
+  max-height: 90vh;
   overflow-y: auto;
-  border: 2px solid #003366;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  border-top: 6px solid #003366;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;   /* ✅ Center children horizontally */
+  text-align: center;    /* ✅ Center text inside */
 }
 
-/* Modal Heading */
-.modal h3 {
-  font-size: 24px;
-  margin-bottom: 20px;
-  color: #003366;
-  font-weight: bold;
-  text-align: center;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #eaeaea;
-}
-
-/* Complaint Info Section */
-.modal .complaint-info {
-  background-color: #f8faff;
-  padding: 15px;
-  border-radius: 8px;
-  border: 1px solid #e6e6e6;
-  margin-bottom: 15px;
-}
-
-.modal .complaint-info p {
-  margin: 6px 0;
-  font-size: 14px;
-  color: #444;
-}
-
-.modal .complaint-info strong {
-  color: #003366;
-}
-
-/* ================= FORM STYLING ================= */
 .modal form {
-  background-color: #ffffff;
-  padding: 18px;
-  border: 1px solid #e6e6e6;
-  border-radius: 10px;
+  width: 100%;           /* make form take full width */
+  max-width: 600px;      /* but not too wide */
   display: flex;
   flex-direction: column;
   gap: 15px;
-  margin-top: 10px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  align-items: center;   /* ✅ center form fields */
 }
 
-.modal label {
-  font-weight: bold;
-  color: #003366;
-  font-size: 14px;
-  margin-bottom: 5px;
+.modal form label {
+  width: 100%;
+  text-align: left;      /* labels align left for readability */
 }
 
-.modal textarea {
-  resize: none;
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  min-height: 100px;
-  background-color: #fff;
-}
-
+.modal textarea,
 .modal input[type="file"] {
-  padding: 6px;
-  border-radius: 6px;
-  background-color: #f8f9fa;
-  border: 1px solid #ccc;
-  font-size: 14px;
+  width: 100%;           /* input spans full width */
 }
 
-/* Submit Button */
-.modal button[type="submit"] {
+/* ================= HISTORY ================= */
+.history {
+  margin-top: 20px;
+  list-style: none;
+  padding: 0;
+}
+
+.history li {
   padding: 12px;
-  background-color: #28a745;
-  color: white;
+  margin-bottom: 10px;
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-left: 6px solid #00b4d8;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+/* ================= BUTTONS ================= */
+button {
+  padding: 10px 14px;
   border: none;
   border-radius: 6px;
-  font-size: 15px;
-  font-weight: bold;
   cursor: pointer;
-  transition: background-color 0.3s;
+  font-size: 14px;
+  font-weight: bold;
+  transition: 0.2s ease;
 }
 
-.modal button[type="submit"]:hover {
-  background-color: #218838;
+/* Primary */
+button.primary {
+  background: linear-gradient(135deg, #003366, #0059b3);
+  color: white;
+}
+
+button.primary:hover {
+  background: linear-gradient(135deg, #002244, #004080);
+}
+
+/* Success */
+button.success {
+  background: linear-gradient(135deg, #28a745, #34d058);
+  color: white;
+}
+
+button.success:hover {
+  background: linear-gradient(135deg, #218838, #2ca64d);
+}
+
+/* Danger */
+button.danger {
+  background: linear-gradient(135deg, #dc3545, #e55365);
+  color: white;
+}
+
+button.danger:hover {
+  background: linear-gradient(135deg, #c82333, #d63d4a);
 }
 
 /* Close Button */
 .close-btn {
   margin-top: 15px;
-  padding: 10px;
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
   width: 100%;
-  font-weight: bold;
 }
-
-.close-btn:hover {
-  background-color: #c82333;
-}
-
-/* ================= HISTORY STYLING ================= */
-.history {
-  list-style: none;
-  padding: 0;
-  margin-top: 15px;
-}
-
-.history li {
-  padding: 8px;
-  background: #f8f9fa;
-  margin-bottom: 8px;
-  border-radius: 6px;
-  border-left: 4px solid #003366;
-  font-size: 14px;
-}
-
-/* ================= CALENDAR STYLING ================= */
-.react-calendar {
-  width: 100%;
+.details-section,
+.update-section,
+.history-section {
   background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
   padding: 15px;
-  margin-top: 15px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.react-calendar__tile--now {
-  background: #28a745 !important;
-  color: white !important;
-  border-radius: 6px;
-}
-
-.react-calendar__tile--active {
-  background: #003366 !important;
-  color: white !important;
-}
-
-/* ================= RESPONSIVE ================= */
-@media (max-width: 992px) {
-  .dashboard {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    width: 100%;
-    flex-direction: row;
-    justify-content: space-around;
-    padding: 10px;
-    position: relative;
-  }
-
-  .main-content {
-    margin-left: 0;
-    margin-top: 15px;
-    padding: 20px;
-  }
-
-  .complaints td img {
-    width: 55px;
-    height: 55px;
-  }
-}
-
-/* ================= ANIMATIONS ================= */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-/* ================= MODAL BACKDROP ================= */
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
-  backdrop-filter: blur(3px);
-}
-
-/* ================= CENTERED MODAL ================= */
-.modal {
-  background: #fff;
-  padding: 25px 30px;
-  border-radius: 14px;
-  max-width: 600px;
-  width: 95%;
-  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.25);
-  animation: fadeIn 0.3s ease-in-out;
-  max-height: 85vh;
-  overflow-y: auto;
-  border: 2px solid #003366;
-  position: relative;
-}
-
-/* Modal Heading */
-.modal h3 {
-  font-size: 22px;
-  margin-bottom: 15px;
-  color: #003366;
-  font-weight: bold;
-  text-align: center;
-  border-bottom: 2px solid #eaeaea;
-  padding-bottom: 8px;
-}
-
-/* ================= COMPLAINT INFO ================= */
-.modal .complaint-info {
-  background: #ffffff;  /* ✅ pure white for readability */
-  padding: 15px 18px;
-  border-radius: 10px;
-  border: 1px solid #e6e6e6;
-  margin-bottom: 15px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
-
-.modal .complaint-info p {
-  margin: 6px 0;
-  font-size: 14px;
-  color: #333;  /* ✅ dark gray for visibility */
-}
-
-.modal .complaint-info strong {
-  color: #003366;  /* ✅ headings in blue */
-}
-
-/* ================= FORM STYLING ================= */
-.modal form {
-  background: #ffffff;
-  padding: 18px;
-  border: 1px solid #e6e6e6;
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  margin-top: 10px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-}
-
-.modal label {
-  font-weight: bold;
-  color: #003366;
-  font-size: 14px;
-  margin-bottom: 5px;
-}
-
-.modal textarea {
-  resize: none;
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  min-height: 100px;
-  background: #fff;
-  width: 100%;
-}
-
-.modal input[type="file"] {
-  padding: 6px;
-  border-radius: 6px;
-  background: #f8f9fa;
-  border: 1px solid #ccc;
-  font-size: 14px;
-}
-
-/* ================= BUTTONS ================= */
-.modal button[type="submit"] {
-  padding: 12px;
-  background: linear-gradient(90deg, #007bff, #0056b3);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 15px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.modal button[type="submit"]:hover {
-  background: linear-gradient(90deg, #0056b3, #004085);
-  transform: scale(1.03);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-}
-
-.close-btn {
-  margin-top: 15px;
-  padding: 12px;
-  background: linear-gradient(90deg, #dc3545, #c82333);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  width: 100%;
-  font-weight: bold;
-  transition: all 0.3s ease;
-}
-
-.close-btn:hover {
-  background: linear-gradient(90deg, #c82333, #a71d2a);
-  transform: scale(1.03);
-  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
-}
-
-/* ================= ANIMATIONS ================= */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  margin-bottom: 20px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }

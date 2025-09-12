@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import ReportIssue from "./ReportIssue";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useLocation } from "react-router-dom";
+
 import Chatbot from "./chatbot";
 import "./UserDashboard.css";
 
@@ -12,7 +14,8 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 function UserDashboard() {
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState("report");
+const location = useLocation();
+const [activeTab, setActiveTab] = useState(location.state?.openTab || "report");
   const [complaints, setComplaints] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [user, setUser] = useState(null);

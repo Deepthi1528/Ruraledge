@@ -253,46 +253,53 @@ const ComplaintDetailsModal = ({ complaint, history, onClose, refreshComplaint, 
   return (
     <motion.div className="modal-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <motion.div className="modal" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }}>
-        <h3>{t.complaintDetails}</h3>
-        <p><strong>{t.id}:</strong> {complaint.complaint_id}</p>
-        <p><strong>{t.type}:</strong> {complaint.issue_type}</p>
-        <p><strong>{t.location}:</strong> {complaint.location}</p>
-        <p><strong>{t.reportedOn}:</strong> {complaint.created_on?.slice(0, 10) || "—"}</p>
-        <p><strong>{t.status}:</strong> {tStatus(complaint.status)}</p>
-        <p><strong>{t.notes}:</strong> {complaint.resolution_notes || "—"}</p>
-        {complaint.resolution_image && (
-          <img
-            src={`${API_URL}/uploads/${complaint.resolution_image}`}
-            alt="Resolution"
-            style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "8px", marginBottom: "10px" }}
-          />
-        )}
+        <div className="details-section">
+  <h3>{t.complaintDetails}</h3>
+  <p><strong>{t.id}:</strong> {complaint.complaint_id}</p>
+  <p><strong>{t.type}:</strong> {complaint.issue_type}</p>
+  <p><strong>{t.location}:</strong> {complaint.location}</p>
+  <p><strong>{t.reportedOn}:</strong> {complaint.created_on?.slice(0, 10) || "—"}</p>
+  <p><strong>{t.status}:</strong> {tStatus(complaint.status)}</p>
+  <p><strong>{t.notes}:</strong> {complaint.resolution_notes || "—"}</p>
+  {complaint.resolution_image && (
+    <img
+      src={`${API_URL}/uploads/${complaint.resolution_image}`}
+      alt="Resolution"
+      style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "8px", marginBottom: "10px" }}
+    />
+  )}
+</div>
 
-        {complaint.status === "in_progress" && (
-          <>
-            <h4>{t.updateProgress}</h4>
-            <form onSubmit={handleUpdate}>
-              <label>
-                {t.notesLabel}
-                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
-              </label>
-              <label>
-                {t.addImage}
-                <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files?.[0] || null)} />
-              </label>
-              <button type="submit" disabled={submitting}>{submitting ? t.submitting : t.submit}</button>
-            </form>
-          </>
-        )}
+{complaint.status === "in_progress" && (
+  <div className="update-section">
+    <h4>{t.updateProgress}</h4>
+    <form onSubmit={handleUpdate}>
+      <label>
+        {t.notesLabel}
+        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </label>
+      <label>
+        {t.addImage}
+        <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files?.[0] || null)} />
+      </label>
+      <button type="submit" disabled={submitting}>
+        {submitting ? t.submitting : t.submit}
+      </button>
+    </form>
+  </div>
+)}
 
-        <h4>{t.statusHistory}</h4>
-        <ul className="history">
-          {history.map((h) => (
-            <li key={h.history_id}>
-              <strong>{tStatus(h.status)}</strong> - {h.notes || "—"} ({new Date(h.updated_on).toLocaleString()})
-            </li>
-          ))}
-        </ul>
+
+<div className="history-section">
+  <h4>{t.statusHistory}</h4>
+  <ul className="history">
+    {history.map((h) => (
+      <li key={h.history_id}>
+        <strong>{tStatus(h.status)}</strong> – {h.notes || "—"} ({new Date(h.updated_on).toLocaleString()})
+      </li>
+    ))}
+  </ul>
+</div>
 
         <button onClick={onClose} className="close-btn">{t.close}</button>
       </motion.div>

@@ -180,7 +180,7 @@ function ReportIssue({ language }) {
       setRedirectCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          navigate("/userdashboard");
+         navigate("/userdashboard", { state: { openTab: "complaints" } });
           return 0;
         }
         return prev - 1;
@@ -200,12 +200,12 @@ function ReportIssue({ language }) {
             Redirecting to <b>My Complaints</b> in {redirectCountdown} sec...
           </p>
           <button
-            type="button"
-            className="btn-view"
-            onClick={() => navigate("/userdashboard")}
-          >
-            📋 Go to My Complaints Now
-          </button>
+  type="button"
+  className="btn-view"
+  onClick={() => navigate("/userdashboard", { state: { openTab: "complaints" } })}
+>
+  📋 Go to My Complaints Now
+</button>
         </div>
       ) : (
         <form onSubmit={handlePreSubmit} className="report-form">
