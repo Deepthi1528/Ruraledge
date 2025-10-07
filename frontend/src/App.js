@@ -8,6 +8,7 @@ import StaffDashboard from "./components/StaffDashboard";
 import AdminDashboard from "./components/AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LanguageSelector from "./components/LanguageSelector";
+import "leaflet/dist/leaflet.css";
 import "./i18n";
 
 function App() {

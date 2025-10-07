@@ -482,7 +482,7 @@ app.post('/reset-password/:token', async (req, res) => {
 
 // Submit complaint (user)
 app.post('/user/report', authenticateUser, uploadComplaint.single('photo'), async (req, res) => {
-  const { department_id, issue_type, description, location, preferred_contact_method, occurred_on, email, phone_number } = req.body;
+  const { department_id, issue_type, description, location,  occurred_on, email, phone_number } = req.body;
   const user_id = req.user.id;
   const complaint_id = uuidv4();
 
@@ -494,19 +494,21 @@ app.post('/user/report', authenticateUser, uploadComplaint.single('photo'), asyn
 
       await conn.query(
         `INSERT INTO complaints
-        (complaint_id, user_id, department_id, issue_type, description, location, preferred_contact_method, occurred_on, email, phone_number, photo_url, status, created_on)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
-        [complaint_id, user_id, department_id, issue_type, description, location, preferred_contact_method, occurred_on || null, email || null, phone_number || null, photo_rel]
+        (complaint_id, user_id, department_id, issue_type, description, location,  occurred_on, email, phone_number, photo_url, status, created_on)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,  'pending', NOW())`,
+        [complaint_id, user_id, department_id, issue_type, description, location, occurred_on || null, email || null, phone_number || null, photo_rel]
       );
 
-      res.json({ message: 'Complaint submitted', complaint_id });
+      res.json({ message: 'Complaint submitted successfully', complaint_id });
     } finally {
       conn.release();
     }
   } catch (err) {
-    return sendServerError(res, err);
+    console.error('Error during complaint submission:', err);
+    res.status(500).json({ error: 'Failed to submit complaint. Please try again later.' });
   }
 });
+
 
 // Fetch user complaints
 app.get('/user/:userId/complaints', authenticateUser, async (req, res) => {

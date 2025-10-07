@@ -1,8 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import "leaflet-routing-machine";
+import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
+
 import "./ReportIssue.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
@@ -17,6 +22,7 @@ function ReportIssue({ language }) {
       issueType: "Issue Type",
       description: "Describe the issue",
       location: "Location",
+      useCurrent: "Use Current Location",
       email: "Enter your email",
       phone: "Enter your phone number",
       date: "When did this happen?",
@@ -25,6 +31,7 @@ function ReportIssue({ language }) {
       confirm: "Confirm Complaint",
       goBack: "Go Back",
       confirmSubmit: "Confirm & Submit",
+      required: "This field is required",
     },
     kn: {
       title: "ಸಮಸ್ಯೆಯನ್ನು ವರದಿ ಮಾಡಿ",
@@ -32,6 +39,7 @@ function ReportIssue({ language }) {
       issueType: "ಸಮಸ್ಯೆಯ ಪ್ರಕಾರ",
       description: "ಸಮಸ್ಯೆಯನ್ನು ವಿವರಿಸಿ",
       location: "ಸ್ಥಳ",
+      useCurrent: "ಪ್ರಸ್ತುತ ಸ್ಥಳ ಬಳಸಿ",
       email: "ನಿಮ್ಮ ಇಮೇಲ್ ನಮೂದಿಸಿ",
       phone: "ನಿಮ್ಮ ಫೋನ್ ಸಂಖ್ಯೆ ನಮೂದಿಸಿ",
       date: "ಇದು ಯಾವಾಗ ಸಂಭವಿಸಿತು?",
@@ -40,6 +48,7 @@ function ReportIssue({ language }) {
       confirm: "ದೂರು ದೃಢೀಕರಿಸಿ",
       goBack: "ಹಿಂದಿರುಗಿ",
       confirmSubmit: "ದೃಢೀಕರಿಸಿ ಮತ್ತು ಸಲ್ಲಿಸಿ",
+      required: "ಅಗತ್ಯ ಕ್ಷೇತ್ರ",
     },
   };
 
@@ -56,6 +65,7 @@ function ReportIssue({ language }) {
     phone_number: "",
   });
 
+  const [errors, setErrors] = useState({});
   const [departments, setDepartments] = useState([]);
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -64,7 +74,10 @@ function ReportIssue({ language }) {
   const [submitted, setSubmitted] = useState(false);
   const [redirectCountdown, setRedirectCountdown] = useState(5);
 
-  // ✅ Check authentication
+  const mapRef = useRef(null);
+  const routeRef = useRef(null);
+
+  // ✅ Authentication check
   useEffect(() => {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
@@ -80,9 +93,8 @@ function ReportIssue({ language }) {
     axios
       .get(`${API_URL}/departments`)
       .then((res) => {
-        if (Array.isArray(res.data)) {
-          setDepartments(res.data);
-        } else {
+        if (Array.isArray(res.data)) setDepartments(res.data);
+        else {
           setDepartments([]);
           toast.error("Invalid department data received");
         }
@@ -94,21 +106,15 @@ function ReportIssue({ language }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   // ✅ File upload
   const handleFileChange = (e) => {
     const f = e.target.files[0];
     if (!f) return;
-
-    if (!f.type.startsWith("image/")) {
-      toast.error("Only image files are allowed");
-      return;
-    }
-    if (f.size > 5 * 1024 * 1024) {
-      toast.error("File too large, max 5MB");
-      return;
-    }
+    if (!f.type.startsWith("image/")) return toast.error("Only images allowed");
+    if (f.size > 5 * 1024 * 1024) return toast.error("Max 5MB");
 
     setFile(f);
     const reader = new FileReader();
@@ -116,11 +122,23 @@ function ReportIssue({ language }) {
     reader.readAsDataURL(f);
   };
 
+  // ✅ Form validation
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.department_id) newErrors.department_id = t.required;
+    if (!formData.issue_type.trim()) newErrors.issue_type = t.required;
+    if (!formData.description.trim()) newErrors.description = t.required;
+    if (!formData.occurred_on) newErrors.occurred_on = t.required;
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   // ✅ Pre-submit
   const handlePreSubmit = (e) => {
     e.preventDefault();
-    if (!formData.department_id || !formData.issue_type || !formData.description) {
-      toast.warning("Please fill all required fields");
+    if (!validateForm()) {
+      toast.warning("⚠️ Please fix the highlighted errors");
       return;
     }
     setShowConfirm(true);
@@ -129,58 +147,42 @@ function ReportIssue({ language }) {
   // ✅ Submit complaint
   const handleSubmit = async () => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      toast.warning("⚠️ Please login first");
-      navigate("/login");
-      return;
-    }
+    if (!token) return toast.warning("⚠️ Please login first");
 
     try {
       setLoading(true);
       const data = new FormData();
-      Object.entries(formData).forEach(([key, val]) => data.append(key, val));
+      Object.entries(formData).forEach(([k, v]) => data.append(k, v));
       if (file) data.append("photo", file);
 
       await axios.post(`${API_URL}/user/report`, data, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
       });
 
       toast.success("✅ Complaint reported successfully!");
       setSubmitted(true);
       setRedirectCountdown(5);
-
-      // Reset form
       setFormData({
-        department_id: "",
-        issue_type: "",
-        description: "",
-        location: "",
-        preferred_contact_method: "",
-        occurred_on: "",
-        email: "",
-        phone_number: "",
+        department_id: "", issue_type: "", description: "", location: "",
+        preferred_contact_method: "", occurred_on: "", email: "", phone_number: "",
       });
       setFile(null);
       setPreview(null);
       setShowConfirm(false);
+      setErrors({});
     } catch (err) {
       toast.error(err.response?.data?.message || "❌ Failed to report issue");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  // ✅ Auto-redirect after submission
+  // ✅ Redirect countdown
   useEffect(() => {
     if (!submitted) return;
     const interval = setInterval(() => {
       setRedirectCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-         navigate("/userdashboard", { state: { openTab: "complaints" } });
+          navigate("/userdashboard", { state: { openTab: "complaints" } });
           return 0;
         }
         return prev - 1;
@@ -189,6 +191,61 @@ function ReportIssue({ language }) {
     return () => clearInterval(interval);
   }, [submitted, navigate]);
 
+  // ✅ Initialize Leaflet map
+  useEffect(() => {
+    if (!mapRef.current) {
+      mapRef.current = L.map("map", { center: [12.9716, 77.5946], zoom: 12 });
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(mapRef.current);
+    }
+  }, []);
+
+  // ✅ Update map on location change
+  useEffect(() => {
+    if (!mapRef.current || !formData.location.trim()) return;
+
+    const locName = formData.location.trim();
+    axios
+      .get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locName)}`)
+      .then((res) => {
+        if (res.data.length > 0) {
+          const { lat, lon, display_name } = res.data[0];
+          mapRef.current.setView([lat, lon], 14);
+
+          if (routeRef.current) mapRef.current.removeControl(routeRef.current);
+
+          routeRef.current = L.Routing.control({
+            waypoints: [L.latLng(12.9716, 77.5946), L.latLng(lat, lon)],
+            routeWhileDragging: false,
+            addWaypoints: false,
+            draggableWaypoints: false,
+            createMarker: () => L.marker([lat, lon]).bindPopup(`<b>${display_name}</b>`),
+          }).addTo(mapRef.current);
+        } else toast.error("⚠️ Location not found");
+      })
+      .catch(() => toast.error("❌ Error fetching location"));
+  }, [formData.location]);
+
+  // ✅ Use current location
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) return toast.error("Geolocation not supported");
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        axios
+          .get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
+          .then((res) => {
+            const place = res.data.display_name;
+            setFormData((prev) => ({ ...prev, location: place }));
+          })
+          .catch(() => toast.error("Error fetching place name from coordinates"));
+      },
+      () => toast.error("Unable to retrieve your location")
+    );
+  };
+
   return (
     <div className="report-issue-container">
       <ToastContainer position="top-right" autoClose={3000} theme="colored" />
@@ -196,141 +253,57 @@ function ReportIssue({ language }) {
       {submitted ? (
         <div className="success-screen">
           <h2>✅ Complaint Submitted</h2>
-          <p>
-            Redirecting to <b>My Complaints</b> in {redirectCountdown} sec...
-          </p>
+          <p>Redirecting to <b>My Complaints</b> in {redirectCountdown} sec...</p>
           <button
-  type="button"
-  className="btn-view"
-  onClick={() => navigate("/userdashboard", { state: { openTab: "complaints" } })}
->
-  📋 Go to My Complaints Now
-</button>
+            type="button"
+            className="btn-view"
+            onClick={() => navigate("/userdashboard", { state: { openTab: "complaints" } })}
+          >📋 Go to My Complaints Now</button>
         </div>
       ) : (
         <form onSubmit={handlePreSubmit} className="report-form">
           <h2>{t.title}</h2>
 
-          {/* Department Dropdown */}
-          <select
-            name="department_id"
-            value={formData.department_id}
-            onChange={handleChange}
-            required
-          >
+          {/* Department */}
+          <select name="department_id" value={formData.department_id} onChange={handleChange}>
             <option value="">{t.department}</option>
-            {departments.length > 0 ? (
-              departments.map((dep) => (
-                <option key={dep.department_id} value={dep.department_id}>
-                  {language === "kn" && dep.kn_name ? dep.kn_name : dep.name}
-                </option>
-              ))
-            ) : (
-              <option disabled>No departments available</option>
-            )}
+            {departments.length > 0
+              ? departments.map((dep) => (
+                  <option key={dep.department_id} value={dep.department_id}>
+                    {language === "kn" && dep.kn_name ? dep.kn_name : dep.name}
+                  </option>
+                ))
+              : <option disabled>No departments available</option>}
           </select>
+          {errors.department_id && <span className="error-text">{errors.department_id}</span>}
 
           {/* Issue Type */}
-          <input
-            type="text"
-            name="issue_type"
-            placeholder={t.issueType}
-            value={formData.issue_type}
-            onChange={handleChange}
-            required
-          />
+          <input type="text" name="issue_type" placeholder={t.issueType} value={formData.issue_type} onChange={handleChange} />
+          {errors.issue_type && <span className="error-text">{errors.issue_type}</span>}
 
           {/* Description */}
-          <textarea
-            name="description"
-            placeholder={t.description}
-            value={formData.description}
-            onChange={handleChange}
-            required
-          />
+          <textarea name="description" placeholder={t.description} value={formData.description} onChange={handleChange} />
+          {errors.description && <span className="error-text">{errors.description}</span>}
 
           {/* Location */}
-          <input
-            type="text"
-            name="location"
-            placeholder={t.location}
-            value={formData.location}
-            onChange={handleChange}
-          />
+          <input type="text" name="location" placeholder={t.location} value={formData.location} onChange={handleChange} />
+          <button type="button" className="btn-current" onClick={handleUseCurrentLocation}>{t.useCurrent}</button>
 
-          {/* Preferred Contact */}
-          <label>Preferred Contact</label>
-          <div className="radio-group">
-            <label>
-              <input
-                type="radio"
-                name="preferred_contact_method"
-                value="email"
-                checked={formData.preferred_contact_method === "email"}
-                onChange={handleChange}
-              />
-              {t.email}
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="preferred_contact_method"
-                value="phone"
-                checked={formData.preferred_contact_method === "phone"}
-                onChange={handleChange}
-              />
-              {t.phone}
-            </label>
-          </div>
-
-          {/* Email */}
-          <input
-            type="email"
-            name="email"
-            placeholder={t.email}
-            value={formData.email}
-            onChange={handleChange}
-          />
-
-          {/* Phone */}
-          <input
-            type="tel"
-            name="phone_number"
-            placeholder={t.phone}
-            value={formData.phone_number}
-            onChange={handleChange}
-          />
+          {/* Map */}
+          <div id="map" style={{ height: "300px", width: "100%", margin: "10px 0" }} />
 
           {/* Occurred Date */}
           <label>{t.date}</label>
-          <input
-            type="date"
-            name="occurred_on"
-            value={formData.occurred_on}
-            onChange={handleChange}
-          />
+          <input type="date" name="occurred_on" value={formData.occurred_on} onChange={handleChange} />
+          {errors.occurred_on && <span className="error-text">{errors.occurred_on}</span>}
 
           {/* File Upload */}
           <label>{t.photo}</label>
           <input type="file" accept="image/*" onChange={handleFileChange} />
-          {preview && (
-            <img
-              src={preview}
-              alt="Preview"
-              style={{
-                width: "140px",
-                height: "140px",
-                borderRadius: "6px",
-                marginTop: "8px",
-                border: "1px solid #ccc",
-              }}
-            />
-          )}
+          {preview && <img src={preview} alt="Preview" style={{ width: "140px", height: "140px", borderRadius: "6px", marginTop: "8px", border: "1px solid #ccc" }} />}
 
           {/* Submit Button */}
-          <button type="submit" disabled={loading}>
-            {loading ? "Submitting..." : t.submit}
-          </button>
+          <button type="submit" disabled={loading}>{loading ? "Submitting..." : t.submit}</button>
         </form>
       )}
 
@@ -339,20 +312,10 @@ function ReportIssue({ language }) {
         <div className="confirm-overlay">
           <div className="confirm-box">
             <h3>{t.confirm}</h3>
-            <p>
-              Are you sure you want to submit this complaint? Please review the
-              details carefully.
-            </p>
+            <p>Are you sure you want to submit this complaint? Please review the details carefully.</p>
             <div className="confirm-actions">
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="btn-cancel"
-              >
-                {t.goBack}
-              </button>
-              <button onClick={handleSubmit} className="btn-submit">
-                {t.confirmSubmit}
-              </button>
+              <button onClick={() => setShowConfirm(false)} className="btn-cancel">{t.goBack}</button>
+              <button onClick={handleSubmit} className="btn-submit">{t.confirmSubmit}</button>
             </div>
           </div>
         </div>
