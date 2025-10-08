@@ -112,6 +112,7 @@ const Sidebar = ({ activeSection, setActiveSection, onLogout, t, language, setLa
 };
 
 // Complaints Table
+// Complaints Table
 const ComplaintsTable = ({ complaints, onSelectComplaint, onAcceptComplaint, t, tStatus }) => {
   if (!complaints) return <p>{t.loadingComplaints}</p>;
 
@@ -138,7 +139,35 @@ const ComplaintsTable = ({ complaints, onSelectComplaint, onAcceptComplaint, t, 
               <tr key={c.complaint_id} onClick={() => onSelectComplaint(c.complaint_id)}>
                 <td>#{c.complaint_id.slice(0, 5)}</td>
                 <td>{c.issue_type}</td>
-                <td>{c.location}</td>
+
+                {/* ✅ LOCATION + VIEW DIRECTION BUTTON */}
+                <td>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "start" }}>
+                    <span>{c.location}</span>
+                    <button
+                      style={{
+                        marginTop: "4px",
+                        padding: "4px 8px",
+                        borderRadius: "6px",
+                        border: "none",
+                        background: "#007bff",
+                        color: "white",
+                        cursor: "pointer",
+                        fontSize: "0.8em",
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(
+                          `https://www.google.com/maps?q=${encodeURIComponent(c.location)}`,
+                          "_blank"
+                        );
+                      }}
+                    >
+                      View Directions
+                    </button>
+                  </div>
+                </td>
+
                 <td>{c.created_on?.slice(0, 10) || "—"}</td>
                 <td>{c.scheduled_visit?.slice(0, 10) || "—"}</td>
                 <td>
@@ -159,13 +188,19 @@ const ComplaintsTable = ({ complaints, onSelectComplaint, onAcceptComplaint, t, 
                     {tStatus(c.status)}
                   </span>
                 </td>
+
                 <td>{c.resolution_notes || "—"}</td>
                 <td>
                   {c.resolution_image ? (
                     <img
                       src={`${API_URL}/uploads/${c.resolution_image}`}
                       alt="Resolution"
-                      style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "5px" }}
+                      style={{
+                        width: "60px",
+                        height: "60px",
+                        objectFit: "cover",
+                        borderRadius: "5px",
+                      }}
                     />
                   ) : (
                     "—"
@@ -203,6 +238,7 @@ const ComplaintsTable = ({ complaints, onSelectComplaint, onAcceptComplaint, t, 
     </section>
   );
 };
+
 
 // Complaint Details Modal
 const ComplaintDetailsModal = ({ complaint, history, onClose, refreshComplaint, t, tStatus }) => {
@@ -257,7 +293,30 @@ const ComplaintDetailsModal = ({ complaint, history, onClose, refreshComplaint, 
   <h3>{t.complaintDetails}</h3>
   <p><strong>{t.id}:</strong> {complaint.complaint_id}</p>
   <p><strong>{t.type}:</strong> {complaint.issue_type}</p>
-  <p><strong>{t.location}:</strong> {complaint.location}</p>
+  {/* <p><strong>{t.location}:</strong> {complaint.location}</p> */}
+  <p>
+  <strong>{t.location}:</strong> {complaint.location}
+  <button
+    style={{
+      marginLeft: "10px",
+      padding: "4px 8px",
+      borderRadius: "6px",
+      border: "none",
+      background: "#007bff",
+      color: "white",
+      cursor: "pointer",
+    }}
+    onClick={() =>
+      window.open(
+        `https://www.google.com/maps?q=${encodeURIComponent(complaint.location)}`,
+        "_blank"
+      )
+    }
+  >
+    View Directions
+  </button>
+</p>
+
   <p><strong>{t.reportedOn}:</strong> {complaint.created_on?.slice(0, 10) || "—"}</p>
   <p><strong>{t.status}:</strong> {tStatus(complaint.status)}</p>
   <p><strong>{t.notes}:</strong> {complaint.resolution_notes || "—"}</p>
