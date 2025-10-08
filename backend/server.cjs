@@ -481,33 +481,62 @@ app.post('/reset-password/:token', async (req, res) => {
 });
 
 // Submit complaint (user)
-app.post('/user/report', authenticateUser, uploadComplaint.single('photo'), async (req, res) => {
-  const { department_id, issue_type, description, location,  occurred_on, email, phone_number } = req.body;
-  const user_id = req.user.id;
-  const complaint_id = uuidv4();
+app.post(
+  '/user/report',
+  authenticateUser,
+  uploadComplaint.single('photo'),
+  async (req, res) => {
+    const {
+      department_id,
+      issue_type,
+      description,
+      location,
+      occurred_on,
+      email,
+      phone_number,
+      preferred_contact_method,
+    } = req.body;
 
-  try {
-    const conn = await pool.getConnection();
+    const user_id = req.user.id;
+    const complaint_id = uuidv4();
+
     try {
-      const filename = req.file ? req.file.filename : null;
-      const photo_rel = filename ? `complaints/${filename}` : null;
+      const conn = await pool.getConnection();
+      try {
+        const filename = req.file ? req.file.filename : null;
+        const photo_rel = filename ? `complaints/${filename}` : null;
 
-      await conn.query(
-        `INSERT INTO complaints
-        (complaint_id, user_id, department_id, issue_type, description, location,  occurred_on, email, phone_number, photo_url, status, created_on)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,  'pending', NOW())`,
-        [complaint_id, user_id, department_id, issue_type, description, location, occurred_on || null, email || null, phone_number || null, photo_rel]
-      );
+        await conn.query(
+          `INSERT INTO complaints
+            (complaint_id, user_id, department_id, issue_type, description, location, occurred_on, email, phone_number, preferred_contact_method, photo_url, status, created_on)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
+          [
+            complaint_id,
+            user_id,
+            department_id,
+            issue_type,
+            description,
+            location,
+            occurred_on || null,
+            email || null,
+            phone_number || null,
+            preferred_contact_method || null,
+            photo_rel,
+          ]
+        );
 
-      res.json({ message: 'Complaint submitted successfully', complaint_id });
-    } finally {
-      conn.release();
+        res.json({ message: 'Complaint submitted successfully', complaint_id });
+      } finally {
+        conn.release();
+      }
+    } catch (err) {
+      console.error('Error during complaint submission:', err);
+      res.status(500).json({
+        error: 'Failed to submit complaint. Please try again later.',
+      });
     }
-  } catch (err) {
-    console.error('Error during complaint submission:', err);
-    res.status(500).json({ error: 'Failed to submit complaint. Please try again later.' });
   }
-});
+);
 
 
 // Fetch user complaints

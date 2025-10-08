@@ -123,16 +123,37 @@ function ReportIssue({ language }) {
   };
 
   // ✅ Form validation
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.department_id) newErrors.department_id = t.required;
-    if (!formData.issue_type.trim()) newErrors.issue_type = t.required;
-    if (!formData.description.trim()) newErrors.description = t.required;
-    if (!formData.occurred_on) newErrors.occurred_on = t.required;
+const validateForm = () => {
+  const newErrors = {};
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  // Required fields
+  if (!formData.department_id) newErrors.department_id = t.required;
+  if (!formData.issue_type.trim()) newErrors.issue_type = t.required;
+  if (!formData.description.trim()) newErrors.description = t.required;
+  if (!formData.occurred_on) newErrors.occurred_on = t.required;
+
+  // Contact Method Validations
+  if (formData.preferred_contact_method === "email") {
+    if (!formData.email.trim()) {
+      newErrors.email = t.required;
+    } else if (!/^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(formData.email)) {
+      newErrors.email = "Only Gmail addresses are allowed";
+    }
+  }
+
+  if (formData.preferred_contact_method === "phone") {
+    if (!formData.phone_number.trim()) {
+      newErrors.phone_number = t.required;
+    } else if (!/^\d{10}$/.test(formData.phone_number)) {
+      newErrors.phone_number = "Phone number must be exactly 10 digits";
+    }
+  }
+
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
+
+
 
   // ✅ Pre-submit
   const handlePreSubmit = (e) => {
@@ -291,6 +312,61 @@ function ReportIssue({ language }) {
 
           {/* Map */}
           <div id="map" style={{ height: "300px", width: "100%", margin: "10px 0" }} />
+          
+      {/* Contact Details */}
+<h3 style={{ marginTop: "20px" }}>Contact Details</h3>
+
+{/* Preferred Contact Method */}
+<label style={{ marginTop: "10px", display: "block" }}>Preferred Contact Method</label>
+<select
+  name="preferred_contact_method"
+  value={formData.preferred_contact_method}
+  onChange={handleChange}
+>
+  <option value="">-- Select Method --</option>
+  <option value="email">Email</option>
+  <option value="phone">Phone</option>
+</select>
+
+{/* Conditionally Render Email Field */}
+{formData.preferred_contact_method === "email" && (
+  <input
+    type="email"
+    name="email"
+    placeholder={t.email}
+    value={formData.email}
+    onChange={handleChange}
+    required
+  />
+)}
+
+{/* Conditionally Render Phone Field */}
+{formData.preferred_contact_method === "phone" && (
+  <input
+    type="tel"
+    name="phone_number"
+    placeholder="Enter 10-digit phone number"
+    value={formData.phone_number.replace(
+      /(\d{3})(\d{3})(\d{0,4})/,
+      (_, p1, p2, p3) => [p1, p2, p3].filter(Boolean).join(" ")
+    )}
+    onChange={(e) => {
+      let value = e.target.value.replace(/\D/g, ""); // remove all non-digits
+      if (value.length > 10) value = value.slice(0, 10); // restrict to 10 digits
+      setFormData((prev) => ({ ...prev, phone_number: value }));
+
+      if (errors.phone_number) setErrors((prev) => ({ ...prev, phone_number: "" }));
+    }}
+    onPaste={(e) => {
+      const paste = e.clipboardData.getData("text");
+      if (!/^\d{0,10}$/.test(paste)) e.preventDefault();
+    }}
+    maxLength={12} // accounts for spaces in formatted display
+    required
+  />
+)}
+{errors.phone_number && <span className="error-text">{errors.phone_number}</span>}
+
 
           {/* Occurred Date */}
           <label>{t.date}</label>
