@@ -481,6 +481,8 @@ app.post('/reset-password/:token', async (req, res) => {
 });
 
 // Submit complaint (user)
+
+
 app.post(
   '/user/report',
   authenticateUser,
@@ -499,6 +501,8 @@ app.post(
 
     const user_id = req.user.id;
     const complaint_id = uuidv4();
+
+    let emailSent = false;
 
     try {
       const conn = await pool.getConnection();
@@ -525,7 +529,30 @@ app.post(
           ]
         );
 
-        res.json({ message: 'Complaint submitted successfully', complaint_id });
+        // ✅ Send confirmation email if email is provided
+        if (email) {
+          const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+              user: process.env.EMAIL_USER, // your email
+              pass: process.env.EMAIL_PASS, // app password if Gmail
+            },
+          });
+
+          const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Complaint Submitted Successfully',
+            html: `<p>Dear User,</p>
+                   <p>Your complaint has been submitted successfully. Complaint ID: <b>${complaint_id}</b></p>
+                   <p>Thank you for reporting the issue.</p>`,
+          };
+
+          await transporter.sendMail(mailOptions);
+          emailSent = true;
+        }
+
+        res.json({ message: 'Complaint submitted successfully', complaint_id, emailSent });
       } finally {
         conn.release();
       }
@@ -679,8 +706,9 @@ app.post('/staff/accept/:complaintId', authenticateStaff, async (req, res) => {
   }
 });
 
-// Staff resolve complaint
-// ✅ Staff resolve complaint with image + notes
+
+
+// ✅ Staff resolve complaint with image + notes + email notification
 app.post(
   "/staff/resolve/:complaint_id",
   authenticateStaff,
@@ -689,21 +717,33 @@ app.post(
     const complaint_id = req.params.complaint_id;
     const { resolution_notes } = req.body;
     const resolvedImage = req.file ? `resolutions/${req.file.filename}` : null;
-
     const staffId = req.user.id;
 
+    let conn;
     try {
-      const conn = await pool.getConnection();
+      console.log("Resolving complaint:", complaint_id, "by staff:", staffId);
 
-      await conn.query(
+      conn = await pool.getConnection();
+
+      // 1️⃣ Update complaint
+      const [result] = await conn.query(
         `UPDATE complaints 
          SET status = 'resolved', resolution_notes = ?, resolution_image = ?
          WHERE complaint_id = ? AND assigned_staff_id = ?`,
         [resolution_notes, resolvedImage, complaint_id, staffId]
       );
 
-      const [updatedComplaint] = await conn.query(
-        `SELECT c.*, u.name AS user_name, s.name AS staff_name, d.name AS department_name
+      console.log("Update Result:", result);
+
+      if (result.affectedRows === 0) {
+        conn.release();
+        console.warn("No complaint updated - maybe wrong staff or complaint ID");
+        return res.status(404).json({ error: "Complaint not found or not assigned to you" });
+      }
+
+      // 2️⃣ Get updated complaint + user info
+      const [updatedRows] = await conn.query(
+        `SELECT c.*, u.name AS user_name, u.email AS user_email, s.name AS staff_name, d.name AS department_name
          FROM complaints c
          LEFT JOIN users u ON c.user_id = u.user_id
          LEFT JOIN staff s ON c.assigned_staff_id = s.staff_id
@@ -712,40 +752,109 @@ app.post(
         [complaint_id]
       );
 
+      const complaint = updatedRows[0];
+      console.log("Updated Complaint:", complaint);
+
+      // 3️⃣ Send email (optional: comment out for debugging)
+      try {
+        if (complaint?.user_email) {
+          const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT || 587,
+            secure: false,
+            auth: {
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
+            },
+          });
+
+          const mailOptions = {
+            from: `"RuralEdge Support" <${process.env.SMTP_USER}>`,
+            to: complaint.user_email,
+            subject: `Complaint #${complaint_id} Resolved`,
+            html: `
+              <p>Hi ${complaint.user_name},</p>
+              <p>Your complaint (#${complaint_id}) regarding "<strong>${complaint.issue_type}</strong>" has been resolved by ${complaint.staff_name}.</p>
+              <p><strong>Resolution Notes:</strong> ${resolution_notes || "—"}</p>
+              ${
+                resolvedImage
+                  ? `<p><img src="${process.env.API_URL}/${resolvedImage}" style="max-width:300px;" /></p>`
+                  : ""
+              }
+              <p>Thank you for using RuralEdge.</p>
+            `,
+          };
+
+          const info = await transporter.sendMail(mailOptions);
+          console.log("Email sent:", info.messageId);
+        }
+      } catch (mailErr) {
+        console.error("Email error:", mailErr);
+      }
+
       conn.release();
 
-      io.emit("complaintResolved", updatedComplaint[0]);
+      io.emit("complaintResolved", complaint);
 
       res.status(200).json({
         message: "Complaint resolved successfully",
-        complaint: updatedComplaint[0],
+        complaint,
       });
     } catch (error) {
+      if (conn) conn.release();
       console.error("Resolve Complaint Error:", error);
-      res.status(500).json({ error: "Failed to resolve complaint" });
+      res.status(500).json({ error: "Failed to resolve complaint", details: error.message });
     }
   }
 );
+
+
 // ✅ Approve staff
+
 app.post("/approve-staff/:id", authenticateAdmin, async (req, res) => {
   const { id } = req.params;
 
   try {
     const conn = await pool.getConnection();
 
-    // ✅ Update staff status
-    await conn.query(
-      "UPDATE staff SET status = 'approved' WHERE staff_id = ?",
-      [id]
-    );
+    try {
+      // ✅ Update staff status
+      await conn.query("UPDATE staff SET status = 'approved' WHERE staff_id = ?", [id]);
 
-    conn.release();
-    res.status(200).json({ message: "Staff approved successfully!" });
+      // ✅ Fetch staff details for email
+      const [staff] = await conn.query("SELECT name, email FROM staff WHERE staff_id = ?", [id]);
+
+      if (staff && staff.length > 0 && staff[0].email) {
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: {
+            user: process.env.EMAIL_USER, // your Gmail
+            pass: process.env.EMAIL_PASS, // app password
+          },
+        });
+
+        const mailOptions = {
+          from: process.env.EMAIL_USER,
+          to: staff[0].email,
+          subject: "Staff Registration Approved",
+          html: `<p>Dear ${staff[0].name},</p>
+                 <p>Your registration has been approved by the admin. You can now log in using your credentials.</p>
+                 <p>Login here: <a href="${process.env.FRONTEND_URL}/login">Login</a></p>`,
+        };
+
+        await transporter.sendMail(mailOptions);
+      }
+
+      res.status(200).json({ message: "Staff approved successfully and email sent!" });
+    } finally {
+      conn.release();
+    }
   } catch (err) {
     console.error("Approve Staff Error:", err);
     res.status(500).json({ error: "Failed to approve staff" });
   }
 });
+
 
 // ✅ Staff update complaint progress (in-progress, pending, etc.)
 app.put("/staff/update/:complaint_id", authenticateStaff, async (req, res) => {
@@ -814,7 +923,6 @@ app.post('/admin-login', async (req, res) => {
 
 // Update complaint when assigning to staff
 // ✅ Assign Complaint to Staff
-// ✅ Assign Complaint to Staff
 app.post("/admin/assign/:complaint_id", authenticateAdmin, async (req, res) => {
   const complaintId = req.params.complaint_id;
   const { assigned_staff_id, scheduled_visit } = req.body;
@@ -828,22 +936,24 @@ app.post("/admin/assign/:complaint_id", authenticateAdmin, async (req, res) => {
     conn = await pool.getConnection();
 
     const [complRows] = await conn.query(
-      "SELECT complaint_id FROM complaints WHERE complaint_id = ?",
+      "SELECT complaint_id, issue_type, description FROM complaints WHERE complaint_id = ?",
       [complaintId]
     );
     if (!complRows.length) {
       conn.release();
       return res.status(404).json({ error: "Complaint not found" });
     }
+    const complaint = complRows[0];
 
     const [staffRows] = await conn.query(
-      "SELECT staff_id, status FROM staff WHERE staff_id = ?",
+      "SELECT staff_id, name, email, status FROM staff WHERE staff_id = ?",
       [assigned_staff_id]
     );
     if (!staffRows.length || staffRows[0].status !== "approved") {
       conn.release();
       return res.status(400).json({ error: "Staff not found or not approved" });
     }
+    const staff = staffRows[0];
 
     await conn.query(
       `UPDATE complaints 
@@ -862,12 +972,40 @@ app.post("/admin/assign/:complaint_id", authenticateAdmin, async (req, res) => {
       [complaintId]
     );
 
+    // ✅ Send email to assigned staff
+    if (staff.email) {
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
+
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: staff.email,
+        subject: `New Complaint Assigned: ${complaint.issue_type}`,
+        html: `<p>Dear ${staff.name},</p>
+               <p>A new complaint has been assigned to you. Details:</p>
+               <ul>
+                 <li><b>Issue:</b> ${complaint.issue_type}</li>
+                 <li><b>Description:</b> ${complaint.description}</li>
+                 <li><b>Scheduled Visit:</b> ${scheduled_visit}</li>
+               </ul>
+               <p>Please log in to your dashboard to view and take action.</p>
+               <p>Login here: <a href="${process.env.FRONTEND_URL}/login">Login</a></p>`,
+      };
+
+      await transporter.sendMail(mailOptions);
+    }
+
     conn.release();
 
     io.emit("assigned_complaint", updated[0]);
 
     return res.status(200).json({
-      message: "Complaint assigned successfully",
+      message: "Complaint assigned successfully and email sent to staff",
       complaint: updated[0],
     });
   } catch (err) {
@@ -876,6 +1014,7 @@ app.post("/admin/assign/:complaint_id", authenticateAdmin, async (req, res) => {
     return res.status(500).json({ error: "Failed to assign complaint" });
   }
 });
+
 
 // ✅ Delete Complaint
 app.delete("/admin/complaints/:complaint_id", authenticateAdmin, async (req, res) => {

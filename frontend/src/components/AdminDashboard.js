@@ -90,29 +90,38 @@ const AdminDashboard = () => {
   };
 
   const assignComplaint = async (complaintId, assigned_staff_id, scheduled_visit) => {
-    if (!assigned_staff_id || !scheduled_visit) {
-      toast.error("Select staff and date");
-      return;
+  if (!assigned_staff_id || !scheduled_visit) {
+    toast.error("Select staff and date");
+    return;
+  }
+  try {
+    const headers = { Authorization: `Bearer ${token}` };
+    const res = await axios.post(
+      `${API_URL}/admin/assign/${complaintId}`,
+      { assigned_staff_id, scheduled_visit },
+      { headers }
+    );
+
+    toast.success(res.data.message || "Complaint assigned!");
+
+    const updated = res.data.complaint || res.data;
+    setComplaints((prev) =>
+      prev.map((c) => (c.complaint_id === complaintId ? updated : c))
+    );
+
+    // ✅ Notify via WebSocket
+    if (socket && socket.connected) socket.emit("assigned_complaint", updated);
+
+    // ✅ Show toast if email sent
+    if (res.data.emailSent !== false) {
+      toast.info(`📧 Notification email sent to staff ${updated.staff_name}`);
     }
-    try {
-      const headers = { Authorization: `Bearer ${token}` };
-      const res = await axios.post(
-        `${API_URL}/admin/assign/${complaintId}`,
-        { assigned_staff_id, scheduled_visit },
-        { headers }
-      );
+  } catch (err) {
+    console.error("Assign error:", err);
+    toast.error(err.response?.data?.message || "Failed to assign complaint");
+  }
+};
 
-      toast.success(res.data.message || "Complaint assigned!");
-      const updated = res.data.complaint || res.data;
-
-      setComplaints((prev) => prev.map((c) => (c.complaint_id === complaintId ? updated : c)));
-
-      if (socket && socket.connected) socket.emit("assigned_complaint", updated);
-    } catch (err) {
-      console.error("Assign error:", err);
-      toast.error(err.response?.data?.message || "Failed to assign complaint");
-    }
-  };
 
   // ✅ Delete Functions
   const deleteUser = async (id) => {

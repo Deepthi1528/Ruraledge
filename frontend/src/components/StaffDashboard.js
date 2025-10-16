@@ -247,44 +247,48 @@ const ComplaintDetailsModal = ({ complaint, history, onClose, refreshComplaint, 
   const [submitting, setSubmitting] = useState(false);
   
 
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    if (submitting) return;
+ const handleUpdate = async (e) => {
+  e.preventDefault();
+  if (submitting) return;
 
-    try {
-      setSubmitting(true);
-      const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append("resolution_notes", notes);
-      if (image) formData.append("resolvedImage", image);
+  try {
+    setSubmitting(true);
+    const token = localStorage.getItem("token");
+    const formData = new FormData();
+    formData.append("resolution_notes", notes);
+    if (image) formData.append("resolvedImage", image);
 
-      const res = await axios.post(
-        `${API_URL}/staff/resolve/${complaint.complaint_id}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      // Server will emit the real-time update. We simply refresh local state.
-      toast.success(res.data.message || t.complaintUpdated);
-      setNotes("");
-      setImage(null);
-
-      // Refresh the single complaint + list
-      if (typeof refreshComplaint === "function") {
-        await refreshComplaint(complaint.complaint_id);
+    const res = await axios.post(
+      `${API_URL}/staff/resolve/${complaint.complaint_id}`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
       }
-    } catch (err) {
-      console.error("Update failed:", err);
-      toast.error(err.response?.data?.error || t.updateFailed);
-    } finally {
-      setSubmitting(false);
+    );
+
+    toast.success(res.data.message || t.complaintUpdated);
+
+    if (res.data.emailSent) {
+      toast.info(`📧 Notification email sent to user ${res.data.complaint.user_name}`);
     }
-  };
+
+    setNotes("");
+    setImage(null);
+
+    if (typeof refreshComplaint === "function") {
+      await refreshComplaint(complaint.complaint_id);
+    }
+  } catch (err) {
+    console.error("Update failed:", err);
+    toast.error(err.response?.data?.error || t.updateFailed);
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   return (
     <motion.div className="modal-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

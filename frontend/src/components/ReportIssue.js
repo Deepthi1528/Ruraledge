@@ -73,6 +73,8 @@ function ReportIssue({ language }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [redirectCountdown, setRedirectCountdown] = useState(5);
+  const [emailSent, setEmailSent] = useState(false); // ✅ Add this
+
 
   const mapRef = useRef(null);
   const routeRef = useRef(null);
@@ -166,35 +168,42 @@ const validateForm = () => {
   };
 
   // ✅ Submit complaint
-  const handleSubmit = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return toast.warning("⚠️ Please login first");
+const handleSubmit = async () => {
+  const token = localStorage.getItem("token");
+  if (!token) return toast.warning("⚠️ Please login first");
 
-    try {
-      setLoading(true);
-      const data = new FormData();
-      Object.entries(formData).forEach(([k, v]) => data.append(k, v));
-      if (file) data.append("photo", file);
+  try {
+    setLoading(true);
+    const data = new FormData();
+    Object.entries(formData).forEach(([k, v]) => data.append(k, v));
+    if (file) data.append("photo", file);
 
-      await axios.post(`${API_URL}/user/report`, data, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
-      });
+    // ✅ Single API call
+    const response = await axios.post(`${API_URL}/user/report`, data, {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+    });
 
-      toast.success("✅ Complaint reported successfully!");
-      setSubmitted(true);
-      setRedirectCountdown(5);
-      setFormData({
-        department_id: "", issue_type: "", description: "", location: "",
-        preferred_contact_method: "", occurred_on: "", email: "", phone_number: "",
-      });
-      setFile(null);
-      setPreview(null);
-      setShowConfirm(false);
-      setErrors({});
-    } catch (err) {
-      toast.error(err.response?.data?.message || "❌ Failed to report issue");
-    } finally { setLoading(false); }
-  };
+    toast.success("✅ Complaint reported successfully!");
+    setEmailSent(response.data.emailSent || false); // ✅ track if email was sent
+    setSubmitted(true);
+    setRedirectCountdown(5);
+
+    // Reset form
+    setFormData({
+      department_id: "", issue_type: "", description: "", location: "",
+      preferred_contact_method: "", occurred_on: "", email: "", phone_number: "",
+    });
+    setFile(null);
+    setPreview(null);
+    setShowConfirm(false);
+    setErrors({});
+  } catch (err) {
+    toast.error(err.response?.data?.message || "❌ Failed to report issue");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // ✅ Redirect countdown
   useEffect(() => {
@@ -252,36 +261,55 @@ const validateForm = () => {
   const handleUseCurrentLocation = () => {
     if (!navigator.geolocation) return toast.error("Geolocation not supported");
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        axios
-          .get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
-          .then((res) => {
-            const place = res.data.display_name;
-            setFormData((prev) => ({ ...prev, location: place }));
-          })
-          .catch(() => toast.error("Error fetching place name from coordinates"));
-      },
-      () => toast.error("Unable to retrieve your location")
-    );
+navigator.geolocation.getCurrentPosition(
+  (position) => {
+    const { latitude, longitude } = position.coords;
+    axios
+      .get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
+      .then((res) => {
+        const place = res.data.display_name;
+        setFormData((prev) => ({ ...prev, location: place }));
+
+        // Also update map immediately
+        if (mapRef.current) {
+          mapRef.current.setView([latitude, longitude], 14);
+
+          if (routeRef.current) mapRef.current.removeControl(routeRef.current);
+
+          routeRef.current = L.Routing.control({
+            waypoints: [L.latLng(12.9716, 77.5946), L.latLng(latitude, longitude)],
+            routeWhileDragging: false,
+            addWaypoints: false,
+            draggableWaypoints: false,
+            createMarker: () =>
+              L.marker([latitude, longitude]).bindPopup(`<b>${place}</b>`),
+          }).addTo(mapRef.current);
+        }
+      })
+      .catch(() => toast.error("Error fetching place name from coordinates"));
+  },
+  (err) => toast.error(`Unable to retrieve your location: ${err.message}`),
+  { enableHighAccuracy: true, timeout: 10000 }
+);
+
   };
 
   return (
     <div className="report-issue-container">
       <ToastContainer position="top-right" autoClose={3000} theme="colored" />
 
-      {submitted ? (
-        <div className="success-screen">
-          <h2>✅ Complaint Submitted</h2>
-          <p>Redirecting to <b>My Complaints</b> in {redirectCountdown} sec...</p>
-          <button
-            type="button"
-            className="btn-view"
-            onClick={() => navigate("/userdashboard", { state: { openTab: "complaints" } })}
-          >📋 Go to My Complaints Now</button>
-        </div>
-      ) : (
+     {submitted ? (
+  <div className="success-screen">
+    <h2>✅ Complaint Submitted</h2>
+    {emailSent && <p style={{ color: "green", margin: "8px 0" }}>📧 Confirmation email sent to your email address!</p>}
+    <p>Redirecting to <b>My Complaints</b> in {redirectCountdown} sec...</p>
+    <button
+      type="button"
+      className="btn-view"
+      onClick={() => navigate("/UserDashboard", { state: { openTab: "complaints" } })}
+    >📋 Go to My Complaints Now</button>
+  </div>
+) : (
         <form onSubmit={handlePreSubmit} className="report-form">
           <h2>{t.title}</h2>
 
