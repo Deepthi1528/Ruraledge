@@ -448,35 +448,85 @@ app.post('/forgot-password', async (req, res) => {
 });
 
 // Reset Password
-app.post('/reset-password/:token', async (req, res) => {
+// ✅ Send Reset Link
+app.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "Email not found" });
+
+    // Create reset token valid for 15 minutes
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "15m" });
+
+    // Send reset link
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+
+    // Configure transporter
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"Your App" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Reset your password",
+      html: `
+        <h2>Reset Password</h2>
+        <p>Click below to reset your password:</p>
+        <a href="${resetLink}" target="_blank">${resetLink}</a>
+        <p>This link expires in 15 minutes.</p>
+      `,
+    });
+
+    res.json({ message: "Reset link sent!" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Reset Password
+app.post("/reset-password/:token", async (req, res) => {
   const { token } = req.params;
-  const { password } = req.body;
-  if (!password) return res.status(400).json({ error: 'Password required' });
+  const { newPassword } = req.body;
+
+  if (!newPassword) return res.status(400).json({ error: "Password required" });
 
   try {
     const conn = await pool.getConnection();
+
+    // Find user with valid token
     const [rows] = await conn.query(
-      'SELECT user_id, name, reset_token_expiry FROM users WHERE reset_token=?',
+      'SELECT user_id FROM users WHERE reset_token=? AND reset_token_expiry > NOW() AND is_deleted=0',
       [token]
     );
 
-    if (!rows.length) return res.status(400).json({ error: 'Invalid token' });
-    const user = rows[0];
-
-    if (new Date(user.reset_token_expiry) < new Date()) {
-      return res.status(400).json({ error: 'Token expired' });
+    if (!rows.length) {
+      conn.release();
+      return res.status(400).json({ error: "Invalid or expired link" });
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    const userId = rows[0].user_id;
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password and clear reset token
     await conn.query(
       'UPDATE users SET password_hash=?, reset_token=NULL, reset_token_expiry=NULL WHERE user_id=?',
-      [hashed, user.user_id]
+      [hashedPassword, userId]
     );
 
     conn.release();
-    res.json({ message: 'Password reset successfully' });
+
+    res.json({ message: "Password reset successful!" });
   } catch (err) {
-    return sendServerError(res, err);
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 

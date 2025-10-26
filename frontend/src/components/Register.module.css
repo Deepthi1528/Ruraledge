@@ -1,73 +1,283 @@
-.register-container {
+/* === Full-page gradient background === */
+.registerPage {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #74b9ff, #a29bfe, #81ecec);
+  background-size: 300% 300%;
+  animation: gradientShift 10s ease infinite;
+  font-family: "Poppins", sans-serif;
+  padding: 20px;
+}
+
+/* === Gradient animation keyframes === */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* === Card Container === */
+.registerContainer {
+  width: 100%;
   max-width: 500px;
-  margin: 30px auto;
-  padding: 25px;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
-  font-family: 'Arial', sans-serif;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border-radius: 15px;
+  padding: 40px 35px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  transition: all 0.4s ease;
 }
 
-.register-container h2 {
-  color: #003366;
+.registerContainer:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+}
+
+/* === Heading === */
+.registerContainer h2 {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 25px;
+  color: #2d3436;
+  font-size: 28px;
+  letter-spacing: 0.5px;
+  transition: color 0.3s ease;
 }
 
-.register-container label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 600;
-  color: #333;
+/* === Form === */
+.registerContainer form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
 }
 
-.register-container input,
-.register-container select {
-  width: 100%;
-  padding: 10px 12px;
-  margin-bottom: 15px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 14px;
-  box-sizing: border-box;
+/* === Input Wrapper === */
+.inputWrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column-reverse;
 }
 
-.register-container select {
-  background-color: #fff;
-}
-
-.register-container button {
-  width: 100%;
+.inputWrapper input,
+.inputWrapper select {
   padding: 12px;
-  background-color: #28a745;
-  border: none;
-  border-radius: 6px;
-  font-weight: bold;
+  border-radius: 8px;
+  border: 1px solid #dcdde1;
+  font-size: 15px;
+  outline: none;
+  background: #fff;
+  color: #2d3436;
+  transition: all 0.2s ease;
+}
+
+.inputWrapper input:focus,
+.inputWrapper select:focus {
+  border-color: #0984e3;
+  box-shadow: 0 0 5px rgba(9, 132, 227, 0.3);
+}
+
+.inputWrapper label {
+  position: absolute;
+  left: 14px;
+  top: 13px;
+  font-size: 14px;
+  color: #636e72;
+  pointer-events: none;
+  transition: 0.2s ease all;
+  background: #fff;
+  padding: 0 4px;
+}
+
+/* === Floating Label === */
+.inputWrapper input:focus + label,
+.inputWrapper input:not(:placeholder-shown) + label,
+.inputWrapper select:focus + label,
+.inputWrapper select:not([value=""]) + label {
+  top: -10px;
+  left: 10px;
+  font-size: 12px;
+  color: #0984e3;
+}
+
+/* === Button === */
+.submitBtn {
+  padding: 12px;
+  background: linear-gradient(135deg, #0984e3, #00cec9);
   color: #fff;
-  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
   cursor: pointer;
-  transition: 0.3s;
+  font-size: 15px;
+  transition: all 0.3s ease;
 }
 
-.register-container button:hover {
-  background-color: #218838;
+.submitBtn:hover {
+  background: linear-gradient(135deg, #00a8ff, #00cec9);
+  box-shadow: 0 4px 10px rgba(0, 132, 227, 0.3);
+  transform: translateY(-2px);
 }
 
-.register-container button:disabled {
-  background-color: #a1d6a1;
-  cursor: not-allowed;
+/* === Password Toggle Button === */
+.passwordWrapper {
+  position: relative;
 }
 
-.register-container .message {
-  margin-top: 15px;
+.showHideBtn {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  color: #555;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.showHideBtn:hover {
+  color: #0984e3;
+  transform: scale(1.1);
+}
+
+/* === Remember Me & Forgot Password Row === */
+.optionsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-top: -10px;
+}
+
+.rememberMe {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: #555;
+}
+
+.rememberMe input {
+  accent-color: #0984e3;
+  cursor: pointer;
+}
+
+.forgotLink {
+  color: #0984e3;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease, text-decoration 0.2s ease;
+}
+
+.forgotLink:hover {
+  color: #00cec9;
+  text-decoration: underline;
+}
+
+/* === Error Message === */
+.error {
+  color: #e74c3c;
+  font-size: 14px;
   text-align: center;
-  font-weight: bold;
-  color: #dc3545; /* error message color */
+  margin-bottom: 10px;
 }
 
+/* === Responsive Design === */
 @media (max-width: 600px) {
-  .register-container {
-    padding: 20px;
-    margin: 20px;
+  .registerContainer {
+    padding: 30px 25px;
+  }
+  .registerContainer h2 {
+    font-size: 24px;
+  }
+}
+
+/* ============================= */
+/* 🌙 DARK MODE OVERRIDES BELOW */
+/* ============================= */
+@media (prefers-color-scheme: dark) {
+  .registerPage {
+    background: linear-gradient(135deg, #2d3436, #636e72, #000000);
+  }
+
+  .registerContainer {
+    background: rgba(20, 20, 20, 0.8);
+    color: #f5f6fa;
+    box-shadow: 0 8px 20px rgba(255, 255, 255, 0.05);
+  }
+
+  .registerContainer h2 {
+    color: #dfe6e9;
+  }
+
+  .inputWrapper input,
+  .inputWrapper select {
+    background: #2f3640;
+    border: 1px solid #555;
+    color: #f5f6fa;
+  }
+
+  .inputWrapper label {
+    background: #2f3640;
+    color: #aaa;
+  }
+
+  .inputWrapper input:focus,
+  .inputWrapper select:focus {
+    border-color: #00cec9;
+    box-shadow: 0 0 5px rgba(0, 206, 201, 0.3);
+  }
+
+  .inputWrapper input:focus + label,
+  .inputWrapper input:not(:placeholder-shown) + label,
+  .inputWrapper select:focus + label,
+  .inputWrapper select:not([value=""]) + label {
+    color: #00cec9;
+  }
+
+  /* === Button === */
+.submitBtn {
+  padding: 12px;
+  background: linear-gradient(135deg, #0984e3, #00cec9); /* same as login button */
+  color: #fff;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.3s ease;
+}
+
+.submitBtn:hover {
+  background: linear-gradient(135deg, #00a8ff, #00cec9); /* same hover effect as login */
+  box-shadow: 0 4px 10px rgba(0, 132, 227, 0.3);
+  transform: translateY(-2px);
+}
+
+
+  .error {
+    color: #ff7675;
+  }
+
+  .showHideBtn {
+    color: #ccc;
+  }
+
+  .showHideBtn:hover {
+    color: #00cec9;
+  }
+
+  .rememberMe {
+    color: #ccc;
+  }
+
+  .forgotLink {
+    color: #00cec9;
+  }
+
+  .forgotLink:hover {
+    color: #74f9ff;
   }
 }
