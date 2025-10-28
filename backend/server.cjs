@@ -124,10 +124,18 @@ function authenticateToken(req, res, next) {
   if (!token) return res.status(401).json({ error: "No token provided" });
 
   jwt.verify(token, JWT_SECRET, (err, payload) => {
-    if (err) return res.status(401).json({ error: "Invalid or expired token" });
-    req.user = payload;
-    next();
-  });
+  if (err) return res.status(401).json({ error: "Invalid or expired token" });
+
+  req.user = payload;
+
+  // ✅ Normalize user_id → id for consistency
+  if (payload.user_id && !payload.id) {
+    req.user.id = payload.user_id;
+  }
+
+  next();
+});
+
 }
 
 function requireRole(...roles) {
@@ -383,34 +391,103 @@ app.get("/wards", async (req, res) => {
 });
 
 // Login
+app.post('/register', async (req, res) => {
+  const { name, email, password, contact_number } = req.body;
+  if (!name || !email || !password)
+    return res.status(400).json({ error: 'Missing fields' });
+
+  const user_id = uuidv4();
+
+  try {
+    const hashed = await bcrypt.hash(password, 10);
+    const conn = await pool.getConnection();
+
+    try {
+      // ✅ Step 1: Check if the user exists
+      const [users] = await conn.query('SELECT * FROM users WHERE email = ?', [email]);
+
+      // ✅ Step 2: If user exists and NOT deleted → block registration
+      if (users.length > 0 && users[0].is_deleted === 0) {
+        conn.release();
+        return res.status(400).json({ error: 'Email already registered' });
+      }
+
+      // ✅ Step 3: If user exists but soft deleted → reactivate
+      if (users.length > 0 && users[0].is_deleted === 1) {
+        await conn.query(
+          'UPDATE users SET name=?, password_hash=?, contact_number=?, is_deleted=0 WHERE email=?',
+          [name, hashed, contact_number || null, email]
+        );
+
+        conn.release();
+        return res.json({ message: 'User account reactivated successfully' });
+      }
+
+      // ✅ Step 4: New user registration
+      await conn.query(
+        'INSERT INTO users (user_id, name, email, password_hash, contact_number) VALUES (?, ?, ?, ?, ?)',
+        [user_id, name, email, hashed, contact_number || null]
+      );
+
+      sendEmailSafe({
+        to: email,
+        subject: 'Rural360 Registration',
+        text: `Hello ${name}, your registration was successful.`,
+      });
+
+      conn.release();
+      res.json({ message: 'User registered successfully' });
+    } catch (err) {
+      conn.release();
+      console.error('Register query error:', err);
+      return res.status(500).json({ error: 'Database error during registration' });
+    }
+  } catch (err) {
+    console.error('Register error:', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Missing fields' });
+  if (!email || !password)
+    return res.status(400).json({ error: 'Missing email or password' });
 
   try {
     const conn = await pool.getConnection();
-    try {
-      const [rows] = await conn.query(
-        'SELECT user_id, name, email, password_hash FROM users WHERE email = ?',
-        [email]
-      );
-      if (!rows.length) return res.status(401).json({ error: 'Invalid credentials' });
+    const [rows] = await conn.query(
+      'SELECT * FROM users WHERE email = ? AND is_deleted = 0',
+      [email]
+    );
+    conn.release();
 
-      const user = rows[0];
-      const ok = await bcrypt.compare(password, user.password_hash);
-      if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+    if (rows.length === 0)
+      return res.status(400).json({ error: 'Invalid credentials' });
 
-      const token = jwt.sign({ id: user.user_id, role: 'user', name: user.name }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    const user = rows[0];
+    const match = await bcrypt.compare(password, user.password_hash);
 
-      res.json({
-        token,
-        role: 'user',
-        user: { id: user.user_id, name: user.name, email: user.email },
-      });
-    } finally {
-      conn.release();
-    }
+    if (!match)
+      return res.status(400).json({ error: 'Invalid credentials' });
+
+    const token = jwt.sign(
+      { user_id: user.user_id, role: 'user' },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // ✅ Send role and normalized user structure
+    res.json({
+      token,
+      role: 'user',
+      user: {
+        id: user.user_id,
+        name: user.name,
+        email: user.email,
+      },
+      message: 'Login successful',
+    });
   } catch (err) {
+    console.error('Login Error:', err);
     return sendServerError(res, err);
   }
 });
@@ -615,11 +692,12 @@ app.post(
   }
 );
 
-
-// Fetch user complaints
-app.get('/user/:userId/complaints', authenticateUser, async (req, res) => {
+app.get("/user/:userId/complaints", authenticateUser, async (req, res) => {
   const { userId } = req.params;
-  if (req.user.id !== userId) return res.status(403).json({ error: 'Access denied' });
+
+  // ✅ Type-safe, normalized comparison
+  if (String(req.user.id) !== String(userId))
+    return res.status(403).json({ error: "Access denied" });
 
   try {
     const conn = await pool.getConnection();
@@ -629,22 +707,25 @@ app.get('/user/:userId/complaints', authenticateUser, async (req, res) => {
          FROM complaints c
          LEFT JOIN staff s ON c.assigned_staff_id = s.staff_id
          JOIN departments d ON c.department_id = d.department_id
-         WHERE c.user_id=? ORDER BY c.created_on DESC`,
+         WHERE c.user_id = ? ORDER BY c.created_on DESC`,
         [userId]
       );
 
-      const augmented = rows.map((r) => ({
+      const complaints = rows.map((r) => ({
         ...r,
-        photo_full_url: makePublicUrl(req, r.photo_url),
-        resolution_full_url: makePublicUrl(req, r.resolution_image),
+        photo_full_url: r.photo_url ? makePublicUrl(req, r.photo_url) : null,
+        resolution_full_url: r.resolution_image
+          ? makePublicUrl(req, r.resolution_image)
+          : null,
       }));
 
-      res.json(augmented);
+      res.json(complaints);
     } finally {
       conn.release();
     }
   } catch (err) {
-    return sendServerError(res, err);
+    console.error("Error fetching complaints:", err);
+    res.status(500).json({ error: "Server error fetching complaints" });
   }
 });
 
@@ -653,25 +734,60 @@ app.get('/user/:userId/complaints', authenticateUser, async (req, res) => {
 // -------------------------
 app.post('/staff-register', async (req, res) => {
   const { name, email, password, department_id, assigned_ward_id } = req.body;
-  if (!name || !email || !password) return res.status(400).json({ error: 'Missing fields' });
+  if (!name || !email || !password) 
+    return res.status(400).json({ error: 'Missing fields' });
+
   const staff_id = uuidv4();
 
   try {
     const hashed = await bcrypt.hash(password, 10);
     const conn = await pool.getConnection();
-    try {
-      const [exists] = await conn.query('SELECT staff_id FROM staff WHERE email = ?', [email]);
-      if (exists.length > 0) return res.status(400).json({ error: 'Email already registered' });
 
-      await conn.query(
-        'INSERT INTO staff (staff_id, name, email, password_hash, department_id, assigned_ward_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [staff_id, name, email, hashed, department_id || null, assigned_ward_id || null, 'pending']
+    try {
+      // ✅ Step 1: Check for existing active staff
+      const [activeStaff] = await conn.query(
+        'SELECT staff_id FROM staff WHERE email = ? AND (is_deleted IS NULL OR is_deleted = FALSE)',
+        [email]
       );
-      res.json({ message: 'Staff registered, awaiting approval' });
+
+      if (activeStaff.length > 0) {
+        conn.release();
+        return res.status(400).json({ error: 'Email already registered' });
+      }
+
+      // ✅ Step 2: Check for soft-deleted staff
+      const [deletedStaff] = await conn.query(
+        'SELECT staff_id FROM staff WHERE email = ? AND is_deleted = TRUE',
+        [email]
+      );
+
+      if (deletedStaff.length > 0) {
+        // Reactivate existing staff
+        await conn.query(
+          `UPDATE staff 
+           SET name = ?, password_hash = ?, department_id = ?, assigned_ward_id = ?, 
+               is_deleted = FALSE, status = 'pending' 
+           WHERE email = ?`,
+          [name, hashed, department_id || null, assigned_ward_id || null, email]
+        );
+
+        conn.release();
+        return res.json({ message: '✅ Staff account reactivated and pending approval' });
+      }
+
+      // ✅ Step 3: Create new staff record
+      await conn.query(
+        `INSERT INTO staff (staff_id, name, email, password_hash, department_id, assigned_ward_id, status, is_deleted) 
+         VALUES (?, ?, ?, ?, ?, ?, 'pending', FALSE)`,
+        [staff_id, name, email, hashed, department_id || null, assigned_ward_id || null]
+      );
+
+      res.json({ message: '✅ Staff registered successfully, awaiting approval' });
     } finally {
       conn.release();
     }
   } catch (err) {
+    console.error('Staff Register Error:', err);
     return sendServerError(res, err);
   }
 });
@@ -1095,62 +1211,45 @@ app.delete("/admin/complaints/:complaint_id", authenticateAdmin, async (req, res
   }
 });
 
-// Admin: get users
+// ✅ Fetch all users (excluding deleted)
 app.get('/admin/users', authenticateAdmin, async (req, res) => {
   try {
     const conn = await pool.getConnection();
-    try {
-      const [rows] = await conn.query('SELECT user_id, name, email, contact_number FROM users');
-      res.json(rows);
-    } finally {
-      conn.release();
-    }
+    const [users] = await conn.query('SELECT * FROM users WHERE is_deleted = FALSE');
+    conn.release();
+    res.json(users);
   } catch (err) {
-    return sendServerError(res, err);
+    console.error('Fetch Users Error:', err);
+    res.status(500).json({ message: 'Failed to fetch users' });
   }
 });
 
-// Admin: get staff
+// ✅ Fetch all staff (excluding deleted)
 app.get('/admin/staff', authenticateAdmin, async (req, res) => {
   try {
     const conn = await pool.getConnection();
-    const [rows] = await conn.query(`
-      SELECT s.staff_id, s.name, s.email, s.status, s.assigned_ward_id, s.department_id,
-      IFNULL(d.name, 'No Department') AS department_name
-      FROM staff s
-      LEFT JOIN departments d ON s.department_id = d.department_id
-      ORDER BY s.name ASC
-    `);
-    res.json({ success: true, data: rows });
+    const [staff] = await conn.query('SELECT * FROM staff WHERE is_deleted = FALSE');
     conn.release();
+    res.json(staff);
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    console.error('Fetch Staff Error:', err);
+    res.status(500).json({ message: 'Failed to fetch staff' });
   }
 });
 
-// Admin: get all complaints
+// ✅ Fetch all complaints (excluding deleted)
 app.get('/admin/complaints/all', authenticateAdmin, async (req, res) => {
   try {
     const conn = await pool.getConnection();
-    const [rows] = await conn.query(`
-      SELECT c.*, u.name AS user_name, s.name AS staff_name, d.name AS department_name
-      FROM complaints c
-      LEFT JOIN users u ON c.user_id = u.user_id
-      LEFT JOIN staff s ON c.assigned_staff_id = s.staff_id
-      LEFT JOIN departments d ON c.department_id = d.department_id
-      ORDER BY c.created_on DESC
-    `);
-    const augmented = rows.map((r) => ({
-      ...r,
-      photo_full_url: makePublicUrl(req, r.photo_url),
-      resolution_full_url: makePublicUrl(req, r.resolution_image),
-    }));
-    res.json(augmented);
+    const [complaints] = await conn.query('SELECT * FROM complaints WHERE is_deleted = FALSE');
     conn.release();
+    res.json(complaints);
   } catch (err) {
-    return sendServerError(res, err);
+    console.error('Fetch Complaints Error:', err);
+    res.status(500).json({ message: 'Failed to fetch complaints' });
   }
 });
+
 
 // Admin: approve staff
 app.post('/admin/staff/approve/:staffId', authenticateAdmin, async (req, res) => {
@@ -1169,56 +1268,66 @@ app.post('/admin/staff/approve/:staffId', authenticateAdmin, async (req, res) =>
 });
 
 // -------------------------
-// ADMIN SOFT DELETE ROUTES
+// ADMIN SOFT DELETE ROUTES (FIXED)
 // -------------------------
 
-// Soft delete User
+// ✅ Soft delete User
 app.delete('/admin/users/:userId', authenticateAdmin, async (req, res) => {
   const { userId } = req.params;
   try {
     const conn = await pool.getConnection();
-    await conn.query('UPDATE users SET is_deleted=TRUE WHERE user_id=?', [userId]);
+    const [result] = await conn.query('UPDATE users SET is_deleted = TRUE WHERE user_id = ?', [userId]);
     conn.release();
-    res.json({ message: 'User marked as deleted' });
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ message: '✅ User marked as deleted successfully' });
   } catch (err) {
-    return sendServerError(res, err);
+    console.error('Delete User Error:', err);
+    res.status(500).json({ message: '❌ Failed to soft delete user', error: err.message });
   }
 });
 
-// Soft delete Staff
+// ✅ Soft delete Staff
 app.delete('/admin/staff/:staffId', authenticateAdmin, async (req, res) => {
   const { staffId } = req.params;
   try {
     const conn = await pool.getConnection();
-    await conn.query('UPDATE staff SET is_deleted=TRUE WHERE staff_id=?', [staffId]);
+    const [result] = await conn.query('UPDATE staff SET is_deleted = TRUE WHERE staff_id = ?', [staffId]);
     conn.release();
-    res.json({ message: 'Staff marked as deleted' });
-  } catch (err) {
-    return sendServerError(res, err);
-  }
-});
-
-// Soft delete Complaint
-app.delete("/admin/complaints/:id", async (req, res) => {
-  const complaintId = req.params.id;
-
-  try {
-    // ✅ Step 1: Delete complaint history first to avoid foreign key conflicts
-    await db.query("DELETE FROM complaint_status_history WHERE complaint_id = ?", [complaintId]);
-
-    // ✅ Step 2: Delete complaint itself
-    const [result] = await db.query("DELETE FROM complaints WHERE complaint_id = ?", [complaintId]);
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Complaint not found" });
+      return res.status(404).json({ message: 'Staff not found' });
     }
 
-    res.status(200).json({ message: "Complaint deleted successfully!" });
+    res.json({ message: '✅ Staff marked as deleted successfully' });
   } catch (err) {
-    console.error("❌ Delete Complaint Error:", err);
-    res.status(500).json({ message: "Server error while deleting complaint" });
+    console.error('Delete Staff Error:', err);
+    res.status(500).json({ message: '❌ Failed to soft delete staff', error: err.message });
   }
 });
+
+// ✅ Soft delete Complaint
+app.delete('/admin/complaints/:complaintId', authenticateAdmin, async (req, res) => {
+  const { complaintId } = req.params;
+  try {
+    const conn = await pool.getConnection();
+    const [result] = await conn.query('UPDATE complaints SET is_deleted = TRUE WHERE complaint_id = ?', [complaintId]);
+    conn.release();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+
+    res.json({ message: '✅ Complaint marked as deleted successfully' });
+  } catch (err) {
+    console.error('Delete Complaint Error:', err);
+    res.status(500).json({ message: '❌ Failed to soft delete complaint', error: err.message });
+  }
+});
+
 
 
 

@@ -12,17 +12,23 @@
   padding: 20px;
 }
 
-/* === Gradient animation keyframes === */
+/* === Animated gradient === */
 @keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 /* === Card Container === */
 .registerContainer {
   width: 100%;
-  max-width: 500px;
+  max-width: 480px;
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
   border-radius: 15px;
@@ -46,11 +52,89 @@
   transition: color 0.3s ease;
 }
 
-/* === Form === */
-.registerContainer form {
+/* === Role Section === */
+.roleTitle {
+  text-align: center;
+  margin-bottom: 12px;
+  color: #2d3436;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.roleSelection {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+}
+
+/* === Role Card === */
+.roleCard {
+  width: 130px;
+  height: 160px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  padding: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.roleCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 20px rgba(0, 132, 227, 0.25);
+  border-color: rgba(9, 132, 227, 0.3);
+}
+
+/* === Active Card === */
+.roleCard.active {
+  border-color: #0984e3;
+  box-shadow: 0 0 18px rgba(9, 132, 227, 0.5);
+  transform: scale(1.05);
+}
+
+/* === Avatar Circle === */
+.roleIconWrapper {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid transparent;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #dfe6e9, #b2bec3);
+}
+
+.roleCard.active .roleIconWrapper {
+  border: 3px solid #0984e3;
+  box-shadow: 0 0 10px rgba(9, 132, 227, 0.6);
+  background: linear-gradient(135deg, #74b9ff, #a29bfe);
+}
+
+.roleIcon {
+  width: 55px;
+  height: 55px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* === Role Text === */
+.roleCard span {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2d3436;
+  margin-top: 4px;
 }
 
 /* === Input Wrapper === */
@@ -101,7 +185,7 @@
   color: #0984e3;
 }
 
-/* === Button === */
+/* === Submit Button === */
 .submitBtn {
   padding: 12px;
   background: linear-gradient(135deg, #0984e3, #00cec9);
@@ -120,60 +204,23 @@
   transform: translateY(-2px);
 }
 
-/* === Password Toggle Button === */
-.passwordWrapper {
-  position: relative;
-}
-
-.showHideBtn {
-  position: absolute;
-  right: 10px;
-  top: 10px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 18px;
-  color: #555;
-  transition: transform 0.2s ease, color 0.2s ease;
-}
-
-.showHideBtn:hover {
-  color: #0984e3;
-  transform: scale(1.1);
-}
-
-/* === Remember Me & Forgot Password Row === */
-.optionsRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* === Redirect Text === */
+.loginRedirect {
+  text-align: center;
+  margin-top: 15px;
   font-size: 14px;
-  margin-top: -10px;
+  color: #2d3436;
 }
 
-.rememberMe {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  color: #555;
-}
-
-.rememberMe input {
-  accent-color: #0984e3;
-  cursor: pointer;
-}
-
-.forgotLink {
+.loginRedirect span {
   color: #0984e3;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s ease, text-decoration 0.2s ease;
+  cursor: pointer;
+  font-weight: 600;
+  transition: color 0.3s ease;
 }
 
-.forgotLink:hover {
+.loginRedirect span:hover {
   color: #00cec9;
-  text-decoration: underline;
 }
 
 /* === Error Message === */
@@ -184,26 +231,34 @@
   margin-bottom: 10px;
 }
 
-/* === Responsive Design === */
+/* === Responsive === */
 @media (max-width: 600px) {
   .registerContainer {
-    padding: 30px 25px;
+    padding: 25px 20px;
   }
   .registerContainer h2 {
-    font-size: 24px;
+    font-size: 22px;
+  }
+  .roleSelection {
+    gap: 12px;
+  }
+  .roleCard {
+    width: 100px;
+    height: 120px;
+  }
+  .roleCard span {
+    font-size: 13px;
   }
 }
 
-/* ============================= */
-/* 🌙 DARK MODE OVERRIDES BELOW */
-/* ============================= */
+/* === Dark Mode === */
 @media (prefers-color-scheme: dark) {
   .registerPage {
     background: linear-gradient(135deg, #2d3436, #636e72, #000000);
   }
 
   .registerContainer {
-    background: rgba(20, 20, 20, 0.8);
+    background: rgba(20, 20, 20, 0.85);
     color: #f5f6fa;
     box-shadow: 0 8px 20px rgba(255, 255, 255, 0.05);
   }
@@ -230,54 +285,39 @@
     box-shadow: 0 0 5px rgba(0, 206, 201, 0.3);
   }
 
-  .inputWrapper input:focus + label,
-  .inputWrapper input:not(:placeholder-shown) + label,
-  .inputWrapper select:focus + label,
-  .inputWrapper select:not([value=""]) + label {
-    color: #00cec9;
+  .roleCard {
+    background: rgba(45, 52, 54, 0.9);
+    border-color: #555;
   }
 
-  /* === Button === */
-.submitBtn {
-  padding: 12px;
-  background: linear-gradient(135deg, #0984e3, #00cec9); /* same as login button */
-  color: #fff;
-  font-weight: 600;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  font-size: 15px;
-  transition: all 0.3s ease;
-}
+  .roleCard.active {
+    border-color: #00cec9;
+    box-shadow: 0 0 15px rgba(0, 206, 201, 0.6);
+  }
 
-.submitBtn:hover {
-  background: linear-gradient(135deg, #00a8ff, #00cec9); /* same hover effect as login */
-  box-shadow: 0 4px 10px rgba(0, 132, 227, 0.3);
-  transform: translateY(-2px);
-}
+  .roleIconWrapper {
+    background: linear-gradient(135deg, #2f3640, #3c3c3c);
+  }
 
+  .roleCard.active .roleIconWrapper {
+    border-color: #00cec9;
+    background: linear-gradient(135deg, #00cec9, #0984e3);
+    box-shadow: 0 0 12px rgba(0, 206, 201, 0.6);
+  }
+
+  .roleCard span {
+    color: #f5f6fa;
+  }
+
+  .submitBtn {
+    background: linear-gradient(135deg, #0984e3, #00cec9);
+  }
+
+  .submitBtn:hover {
+    background: linear-gradient(135deg, #00a8ff, #00cec9);
+  }
 
   .error {
     color: #ff7675;
-  }
-
-  .showHideBtn {
-    color: #ccc;
-  }
-
-  .showHideBtn:hover {
-    color: #00cec9;
-  }
-
-  .rememberMe {
-    color: #ccc;
-  }
-
-  .forgotLink {
-    color: #00cec9;
-  }
-
-  .forgotLink:hover {
-    color: #74f9ff;
   }
 }
