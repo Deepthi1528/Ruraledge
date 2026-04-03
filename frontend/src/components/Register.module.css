@@ -1,73 +1,323 @@
-.register-container {
-  max-width: 500px;
-  margin: 30px auto;
-  padding: 25px;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
-  font-family: 'Arial', sans-serif;
+/* === Full-page gradient background === */
+.registerPage {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #74b9ff, #a29bfe, #81ecec);
+  background-size: 300% 300%;
+  animation: gradientShift 10s ease infinite;
+  font-family: "Poppins", sans-serif;
+  padding: 20px;
 }
 
-.register-container h2 {
-  color: #003366;
+/* === Animated gradient === */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* === Card Container === */
+.registerContainer {
+  width: 100%;
+  max-width: 480px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border-radius: 15px;
+  padding: 40px 35px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  transition: all 0.4s ease;
+}
+
+.registerContainer:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+}
+
+/* === Heading === */
+.registerContainer h2 {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 25px;
+  color: #2d3436;
+  font-size: 28px;
+  letter-spacing: 0.5px;
+  transition: color 0.3s ease;
 }
 
-.register-container label {
-  display: block;
-  margin-bottom: 5px;
+/* === Role Section === */
+.roleTitle {
+  text-align: center;
+  margin-bottom: 12px;
+  color: #2d3436;
   font-weight: 600;
-  color: #333;
+  font-size: 18px;
 }
 
-.register-container input,
-.register-container select {
-  width: 100%;
-  padding: 10px 12px;
-  margin-bottom: 15px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 14px;
-  box-sizing: border-box;
+.roleSelection {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
 }
 
-.register-container select {
-  background-color: #fff;
-}
-
-.register-container button {
-  width: 100%;
-  padding: 12px;
-  background-color: #28a745;
-  border: none;
-  border-radius: 6px;
-  font-weight: bold;
-  color: #fff;
-  font-size: 16px;
+/* === Role Card === */
+.roleCard {
+  width: 130px;
+  height: 160px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: 0.3s;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  padding: 12px;
+  position: relative;
+  overflow: hidden;
 }
 
-.register-container button:hover {
-  background-color: #218838;
+.roleCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 20px rgba(0, 132, 227, 0.25);
+  border-color: rgba(9, 132, 227, 0.3);
 }
 
-.register-container button:disabled {
-  background-color: #a1d6a1;
-  cursor: not-allowed;
+/* === Active Card === */
+.roleCard.active {
+  border-color: #0984e3;
+  box-shadow: 0 0 18px rgba(9, 132, 227, 0.5);
+  transform: scale(1.05);
 }
 
-.register-container .message {
-  margin-top: 15px;
+/* === Avatar Circle === */
+.roleIconWrapper {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid transparent;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #dfe6e9, #b2bec3);
+}
+
+.roleCard.active .roleIconWrapper {
+  border: 3px solid #0984e3;
+  box-shadow: 0 0 10px rgba(9, 132, 227, 0.6);
+  background: linear-gradient(135deg, #74b9ff, #a29bfe);
+}
+
+.roleIcon {
+  width: 55px;
+  height: 55px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* === Role Text === */
+.roleCard span {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2d3436;
+  margin-top: 4px;
+}
+
+/* === Input Wrapper === */
+.inputWrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.inputWrapper input,
+.inputWrapper select {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #dcdde1;
+  font-size: 15px;
+  outline: none;
+  background: #fff;
+  color: #2d3436;
+  transition: all 0.2s ease;
+}
+
+.inputWrapper input:focus,
+.inputWrapper select:focus {
+  border-color: #0984e3;
+  box-shadow: 0 0 5px rgba(9, 132, 227, 0.3);
+}
+
+.inputWrapper label {
+  position: absolute;
+  left: 14px;
+  top: 13px;
+  font-size: 14px;
+  color: #636e72;
+  pointer-events: none;
+  transition: 0.2s ease all;
+  background: #fff;
+  padding: 0 4px;
+}
+
+/* === Floating Label === */
+.inputWrapper input:focus + label,
+.inputWrapper input:not(:placeholder-shown) + label,
+.inputWrapper select:focus + label,
+.inputWrapper select:not([value=""]) + label {
+  top: -10px;
+  left: 10px;
+  font-size: 12px;
+  color: #0984e3;
+}
+
+/* === Submit Button === */
+.submitBtn {
+  padding: 12px;
+  background: linear-gradient(135deg, #0984e3, #00cec9);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.3s ease;
+}
+
+.submitBtn:hover {
+  background: linear-gradient(135deg, #00a8ff, #00cec9);
+  box-shadow: 0 4px 10px rgba(0, 132, 227, 0.3);
+  transform: translateY(-2px);
+}
+
+/* === Redirect Text === */
+.loginRedirect {
   text-align: center;
-  font-weight: bold;
-  color: #dc3545; /* error message color */
+  margin-top: 15px;
+  font-size: 14px;
+  color: #2d3436;
 }
 
+.loginRedirect span {
+  color: #0984e3;
+  cursor: pointer;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.loginRedirect span:hover {
+  color: #00cec9;
+}
+
+/* === Error Message === */
+.error {
+  color: #e74c3c;
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+/* === Responsive === */
 @media (max-width: 600px) {
-  .register-container {
-    padding: 20px;
-    margin: 20px;
+  .registerContainer {
+    padding: 25px 20px;
+  }
+  .registerContainer h2 {
+    font-size: 22px;
+  }
+  .roleSelection {
+    gap: 12px;
+  }
+  .roleCard {
+    width: 100px;
+    height: 120px;
+  }
+  .roleCard span {
+    font-size: 13px;
+  }
+}
+
+/* === Dark Mode === */
+@media (prefers-color-scheme: dark) {
+  .registerPage {
+    background: linear-gradient(135deg, #2d3436, #636e72, #000000);
+  }
+
+  .registerContainer {
+    background: rgba(20, 20, 20, 0.85);
+    color: #f5f6fa;
+    box-shadow: 0 8px 20px rgba(255, 255, 255, 0.05);
+  }
+
+  .registerContainer h2 {
+    color: #dfe6e9;
+  }
+
+  .inputWrapper input,
+  .inputWrapper select {
+    background: #2f3640;
+    border: 1px solid #555;
+    color: #f5f6fa;
+  }
+
+  .inputWrapper label {
+    background: #2f3640;
+    color: #aaa;
+  }
+
+  .inputWrapper input:focus,
+  .inputWrapper select:focus {
+    border-color: #00cec9;
+    box-shadow: 0 0 5px rgba(0, 206, 201, 0.3);
+  }
+
+  .roleCard {
+    background: rgba(45, 52, 54, 0.9);
+    border-color: #555;
+  }
+
+  .roleCard.active {
+    border-color: #00cec9;
+    box-shadow: 0 0 15px rgba(0, 206, 201, 0.6);
+  }
+
+  .roleIconWrapper {
+    background: linear-gradient(135deg, #2f3640, #3c3c3c);
+  }
+
+  .roleCard.active .roleIconWrapper {
+    border-color: #00cec9;
+    background: linear-gradient(135deg, #00cec9, #0984e3);
+    box-shadow: 0 0 12px rgba(0, 206, 201, 0.6);
+  }
+
+  .roleCard span {
+    color: #f5f6fa;
+  }
+
+  .submitBtn {
+    background: linear-gradient(135deg, #0984e3, #00cec9);
+  }
+
+  .submitBtn:hover {
+    background: linear-gradient(135deg, #00a8ff, #00cec9);
+  }
+
+  .error {
+    color: #ff7675;
   }
 }

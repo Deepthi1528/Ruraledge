@@ -6,6 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Chatbot from "./chatbot";
 import "./AdminDashboard.css";
 
+
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const AdminDashboard = () => {
@@ -89,29 +90,38 @@ const AdminDashboard = () => {
   };
 
   const assignComplaint = async (complaintId, assigned_staff_id, scheduled_visit) => {
-    if (!assigned_staff_id || !scheduled_visit) {
-      toast.error("Select staff and date");
-      return;
+  if (!assigned_staff_id || !scheduled_visit) {
+    toast.error("Select staff and date");
+    return;
+  }
+  try {
+    const headers = { Authorization: `Bearer ${token}` };
+    const res = await axios.post(
+      `${API_URL}/admin/assign/${complaintId}`,
+      { assigned_staff_id, scheduled_visit },
+      { headers }
+    );
+
+    toast.success(res.data.message || "Complaint assigned!");
+
+    const updated = res.data.complaint || res.data;
+    setComplaints((prev) =>
+      prev.map((c) => (c.complaint_id === complaintId ? updated : c))
+    );
+
+    // ✅ Notify via WebSocket
+    if (socket && socket.connected) socket.emit("assigned_complaint", updated);
+
+    // ✅ Show toast if email sent
+    if (res.data.emailSent !== false) {
+      toast.info(`📧 Notification email sent to staff ${updated.staff_name}`);
     }
-    try {
-      const headers = { Authorization: `Bearer ${token}` };
-      const res = await axios.post(
-        `${API_URL}/admin/assign/${complaintId}`,
-        { assigned_staff_id, scheduled_visit },
-        { headers }
-      );
+  } catch (err) {
+    console.error("Assign error:", err);
+    toast.error(err.response?.data?.message || "Failed to assign complaint");
+  }
+};
 
-      toast.success(res.data.message || "Complaint assigned!");
-      const updated = res.data.complaint || res.data;
-
-      setComplaints((prev) => prev.map((c) => (c.complaint_id === complaintId ? updated : c)));
-
-      if (socket && socket.connected) socket.emit("assigned_complaint", updated);
-    } catch (err) {
-      console.error("Assign error:", err);
-      toast.error(err.response?.data?.message || "Failed to assign complaint");
-    }
-  };
 
   // ✅ Delete Functions
   const deleteUser = async (id) => {
@@ -225,85 +235,167 @@ const AdminDashboard = () => {
         </table>
       );
     } else if (activeTab === "complaints") {
-      const filteredComplaints = complaints.filter((c) =>
-        (c.department_name || "").toLowerCase().includes(complaintSearch.toLowerCase())
-      );
+  const filteredComplaints = complaints.filter((c) =>
+    (c.department_name || "").toLowerCase().includes(complaintSearch.toLowerCase())
+  );
 
-      return (
-        <>
-          <div className="search-box">
-            <input
-              type="text"
-              placeholder="Search by department..."
-              value={complaintSearch}
-              onChange={(e) => setComplaintSearch(e.target.value)}
-            />
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>User</th><th>Department</th><th>Issue</th><th>Reported On</th><th>Status</th>
-                <th>Uploaded Image</th><th>Resolution Image</th><th>Resolution Notes</th>
-                <th>Assigned Staff</th><th>Assign Task</th><th>Delete</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredComplaints.map((c) => {
-                const photoUrl = c.photo_full_url || (c.photo_url ? `${API_URL}/uploads/${c.photo_url}` : null);
-                const resolutionUrl = c.resolution_full_url || (c.resolution_image ? `${API_URL}/uploads/${c.resolution_image}` : null);
+  return (
+    <>
+      <div className="search-box">
+        <input
+          type="text"
+          placeholder="Search by department..."
+          value={complaintSearch}
+          onChange={(e) => setComplaintSearch(e.target.value)}
+        />
+      </div>
 
-                return (
-                  <tr key={c.complaint_id}>
-                    <td>{c.user_name}</td>
-                    <td>{c.department_name}</td>
-                    <td>{c.issue_type}</td>
-                    <td>{c.created_on?.slice(0, 10) || "—"}</td>
-                    <td>{c.status}</td>
-                    <td>
-                      {photoUrl && <img src={photoUrl} alt="Uploaded" className="thumbnail" onClick={() => { setModalImage(photoUrl); setModalNotes(c.description || ""); }} />}
-                    </td>
-                    <td>
-                      {resolutionUrl && <img src={resolutionUrl} alt="Resolution" className="thumbnail" onClick={() => { setModalImage(resolutionUrl); setModalNotes(c.resolution_notes || ""); }} />}
-                    </td>
-                    <td>{c.resolution_notes || "—"}</td>
-                    <td>{c.staff_name || "-"}</td>
-                    <td>
-                      <select
-                        value={assignments[c.complaint_id]?.assigned_staff_id || ""}
-                        onChange={(e) => handleAssignmentChange(c.complaint_id, "assigned_staff_id", e.target.value)}
-                      >
-                        <option value="">Assign Staff</option>
-                        {staff.filter((s) => s.status === "approved" && s.department_id === c.department_id).map((s) => (
-                          <option key={s.staff_id} value={s.staff_id}>{s.name}</option>
-                        ))}
-                      </select>
-                      <input
-                        type="date"
-                        value={assignments[c.complaint_id]?.scheduled_visit || ""}
-                        onChange={(e) => handleAssignmentChange(c.complaint_id, "scheduled_visit", e.target.value)}
-                      />
-                      <button
-                        className="assign-btn"
-                        onClick={() =>
-                          assignComplaint(
-                            c.complaint_id,
-                            assignments[c.complaint_id]?.assigned_staff_id,
-                            assignments[c.complaint_id]?.scheduled_visit
-                          )
+      <table>
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Department</th>
+            <th>Issue</th>
+            <th>Reported On</th>
+            <th>Status</th>
+            <th>Location</th>
+            <th>Uploaded Image</th>
+            <th>Resolution Image</th>
+            <th>Assign Task</th>
+            <th>Delete</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredComplaints.map((c) => {
+            const photoUrl = c.photo_full_url || (c.photo_url ? `${API_URL}/uploads/${c.photo_url}` : null);
+            const resolutionUrl = c.resolution_full_url || (c.resolution_image ? `${API_URL}/uploads/${c.resolution_image}` : null);
+
+            return (
+              <tr key={c.complaint_id}>
+                <td>{c.user_name}</td>
+                <td>{c.department_name}</td>
+                <td>{c.issue_type}</td>
+                <td>{c.created_on?.slice(0, 10) || "—"}</td>
+                <td>{c.status}</td>
+
+                {/* ✅ Location + Google Maps Button */}
+                <td>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "start" }}>
+                    <span>{c.location}</span>
+                    <button
+                      style={{
+                        marginTop: "4px",
+                        padding: "4px 8px",
+                        borderRadius: "6px",
+                        border: "none",
+                        background: "#007bff",
+                        color: "white",
+                        cursor: "pointer",
+                        fontSize: "0.8em",
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (c.latitude && c.longitude) {
+                          window.open(
+                            `https://www.google.com/maps?q=${c.latitude},${c.longitude}`,
+                            "_blank"
+                          );
+                        } else {
+                          window.open(
+                            `https://www.google.com/maps?q=${encodeURIComponent(c.location)}`,
+                            "_blank"
+                          );
                         }
-                      >
-                        Assign
-                      </button>
-                    </td>
-                    <td><button className="delete-btn" onClick={() => deleteComplaint(c.complaint_id)}>Delete</button></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </>
-      );
-    }
+                      }}
+                    >
+                      View Directions
+                    </button>
+                  </div>
+                </td>
+
+                <td>
+                  {photoUrl && (
+                    <img
+                      src={photoUrl}
+                      alt="Uploaded"
+                      className="thumbnail"
+                      onClick={() => {
+                        setModalImage(photoUrl);
+                        setModalNotes(c.description || "");
+                      }}
+                    />
+                  )}
+                </td>
+
+                <td>
+                  {resolutionUrl && (
+                    <img
+                      src={resolutionUrl}
+                      alt="Resolution"
+                      className="thumbnail"
+                      onClick={() => {
+                        setModalImage(resolutionUrl);
+                        setModalNotes(c.resolution_notes || "");
+                      }}
+                    />
+                  )}
+                </td>
+
+                <td>
+                  <select
+                    value={assignments[c.complaint_id]?.assigned_staff_id || ""}
+                    onChange={(e) =>
+                      handleAssignmentChange(c.complaint_id, "assigned_staff_id", e.target.value)
+                    }
+                  >
+                    <option value="">Assign Staff</option>
+                    {staff
+                      .filter((s) => s.status === "approved" && s.department_id === c.department_id)
+                      .map((s) => (
+                        <option key={s.staff_id} value={s.staff_id}>
+                          {s.name}
+                        </option>
+                      ))}
+                  </select>
+
+                  <input
+                    type="date"
+                    value={assignments[c.complaint_id]?.scheduled_visit || ""}
+                    onChange={(e) =>
+                      handleAssignmentChange(c.complaint_id, "scheduled_visit", e.target.value)
+                    }
+                  />
+
+                  <button
+                    className="assign-btn"
+                    onClick={() =>
+                      assignComplaint(
+                        c.complaint_id,
+                        assignments[c.complaint_id]?.assigned_staff_id,
+                        assignments[c.complaint_id]?.scheduled_visit
+                      )
+                    }
+                  >
+                    Assign
+                  </button>
+                </td>
+
+                <td>
+                  <button
+                    className="delete-btn"
+                    onClick={() => deleteComplaint(c.complaint_id)}
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </>
+  );
+}
   };
 
   return (

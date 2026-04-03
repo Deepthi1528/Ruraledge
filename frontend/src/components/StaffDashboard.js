@@ -112,6 +112,7 @@ const Sidebar = ({ activeSection, setActiveSection, onLogout, t, language, setLa
 };
 
 // Complaints Table
+// Complaints Table
 const ComplaintsTable = ({ complaints, onSelectComplaint, onAcceptComplaint, t, tStatus }) => {
   if (!complaints) return <p>{t.loadingComplaints}</p>;
 
@@ -138,7 +139,35 @@ const ComplaintsTable = ({ complaints, onSelectComplaint, onAcceptComplaint, t, 
               <tr key={c.complaint_id} onClick={() => onSelectComplaint(c.complaint_id)}>
                 <td>#{c.complaint_id.slice(0, 5)}</td>
                 <td>{c.issue_type}</td>
-                <td>{c.location}</td>
+
+                {/* ✅ LOCATION + VIEW DIRECTION BUTTON */}
+                <td>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "start" }}>
+                    <span>{c.location}</span>
+                    <button
+                      style={{
+                        marginTop: "4px",
+                        padding: "4px 8px",
+                        borderRadius: "6px",
+                        border: "none",
+                        background: "#007bff",
+                        color: "white",
+                        cursor: "pointer",
+                        fontSize: "0.8em",
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(
+                          `https://www.google.com/maps?q=${encodeURIComponent(c.location)}`,
+                          "_blank"
+                        );
+                      }}
+                    >
+                      View Directions
+                    </button>
+                  </div>
+                </td>
+
                 <td>{c.created_on?.slice(0, 10) || "—"}</td>
                 <td>{c.scheduled_visit?.slice(0, 10) || "—"}</td>
                 <td>
@@ -159,13 +188,19 @@ const ComplaintsTable = ({ complaints, onSelectComplaint, onAcceptComplaint, t, 
                     {tStatus(c.status)}
                   </span>
                 </td>
+
                 <td>{c.resolution_notes || "—"}</td>
                 <td>
                   {c.resolution_image ? (
                     <img
                       src={`${API_URL}/uploads/${c.resolution_image}`}
                       alt="Resolution"
-                      style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "5px" }}
+                      style={{
+                        width: "60px",
+                        height: "60px",
+                        objectFit: "cover",
+                        borderRadius: "5px",
+                      }}
                     />
                   ) : (
                     "—"
@@ -204,6 +239,7 @@ const ComplaintsTable = ({ complaints, onSelectComplaint, onAcceptComplaint, t, 
   );
 };
 
+
 // Complaint Details Modal
 const ComplaintDetailsModal = ({ complaint, history, onClose, refreshComplaint, t, tStatus }) => {
   const [notes, setNotes] = useState("");
@@ -211,88 +247,122 @@ const ComplaintDetailsModal = ({ complaint, history, onClose, refreshComplaint, 
   const [submitting, setSubmitting] = useState(false);
   
 
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    if (submitting) return;
+ const handleUpdate = async (e) => {
+  e.preventDefault();
+  if (submitting) return;
 
-    try {
-      setSubmitting(true);
-      const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append("resolution_notes", notes);
-      if (image) formData.append("resolvedImage", image);
+  try {
+    setSubmitting(true);
+    const token = localStorage.getItem("token");
+    const formData = new FormData();
+    formData.append("resolution_notes", notes);
+    if (image) formData.append("resolvedImage", image);
 
-      const res = await axios.post(
-        `${API_URL}/staff/resolve/${complaint.complaint_id}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      // Server will emit the real-time update. We simply refresh local state.
-      toast.success(res.data.message || t.complaintUpdated);
-      setNotes("");
-      setImage(null);
-
-      // Refresh the single complaint + list
-      if (typeof refreshComplaint === "function") {
-        await refreshComplaint(complaint.complaint_id);
+    const res = await axios.post(
+      `${API_URL}/staff/resolve/${complaint.complaint_id}`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
       }
-    } catch (err) {
-      console.error("Update failed:", err);
-      toast.error(err.response?.data?.error || t.updateFailed);
-    } finally {
-      setSubmitting(false);
+    );
+
+    toast.success(res.data.message || t.complaintUpdated);
+
+    if (res.data.emailSent) {
+      toast.info(`📧 Notification email sent to user ${res.data.complaint.user_name}`);
     }
-  };
+
+    setNotes("");
+    setImage(null);
+
+    if (typeof refreshComplaint === "function") {
+      await refreshComplaint(complaint.complaint_id);
+    }
+  } catch (err) {
+    console.error("Update failed:", err);
+    toast.error(err.response?.data?.error || t.updateFailed);
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   return (
     <motion.div className="modal-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <motion.div className="modal" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }}>
-        <h3>{t.complaintDetails}</h3>
-        <p><strong>{t.id}:</strong> {complaint.complaint_id}</p>
-        <p><strong>{t.type}:</strong> {complaint.issue_type}</p>
-        <p><strong>{t.location}:</strong> {complaint.location}</p>
-        <p><strong>{t.reportedOn}:</strong> {complaint.created_on?.slice(0, 10) || "—"}</p>
-        <p><strong>{t.status}:</strong> {tStatus(complaint.status)}</p>
-        <p><strong>{t.notes}:</strong> {complaint.resolution_notes || "—"}</p>
-        {complaint.resolution_image && (
-          <img
-            src={`${API_URL}/uploads/${complaint.resolution_image}`}
-            alt="Resolution"
-            style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "8px", marginBottom: "10px" }}
-          />
-        )}
+        <div className="details-section">
+  <h3>{t.complaintDetails}</h3>
+  <p><strong>{t.id}:</strong> {complaint.complaint_id}</p>
+  <p><strong>{t.type}:</strong> {complaint.issue_type}</p>
+  {/* <p><strong>{t.location}:</strong> {complaint.location}</p> */}
+  <p>
+  <strong>{t.location}:</strong> {complaint.location}
+  <button
+    style={{
+      marginLeft: "10px",
+      padding: "4px 8px",
+      borderRadius: "6px",
+      border: "none",
+      background: "#007bff",
+      color: "white",
+      cursor: "pointer",
+    }}
+    onClick={() =>
+      window.open(
+        `https://www.google.com/maps?q=${encodeURIComponent(complaint.location)}`,
+        "_blank"
+      )
+    }
+  >
+    View Directions
+  </button>
+</p>
 
-        {complaint.status === "in_progress" && (
-          <>
-            <h4>{t.updateProgress}</h4>
-            <form onSubmit={handleUpdate}>
-              <label>
-                {t.notesLabel}
-                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
-              </label>
-              <label>
-                {t.addImage}
-                <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files?.[0] || null)} />
-              </label>
-              <button type="submit" disabled={submitting}>{submitting ? t.submitting : t.submit}</button>
-            </form>
-          </>
-        )}
+  <p><strong>{t.reportedOn}:</strong> {complaint.created_on?.slice(0, 10) || "—"}</p>
+  <p><strong>{t.status}:</strong> {tStatus(complaint.status)}</p>
+  <p><strong>{t.notes}:</strong> {complaint.resolution_notes || "—"}</p>
+  {complaint.resolution_image && (
+    <img
+      src={`${API_URL}/uploads/${complaint.resolution_image}`}
+      alt="Resolution"
+      style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "8px", marginBottom: "10px" }}
+    />
+  )}
+</div>
 
-        <h4>{t.statusHistory}</h4>
-        <ul className="history">
-          {history.map((h) => (
-            <li key={h.history_id}>
-              <strong>{tStatus(h.status)}</strong> - {h.notes || "—"} ({new Date(h.updated_on).toLocaleString()})
-            </li>
-          ))}
-        </ul>
+{complaint.status === "in_progress" && (
+  <div className="update-section">
+    <h4>{t.updateProgress}</h4>
+    <form onSubmit={handleUpdate}>
+      <label>
+        {t.notesLabel}
+        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </label>
+      <label>
+        {t.addImage}
+        <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files?.[0] || null)} />
+      </label>
+      <button type="submit" disabled={submitting}>
+        {submitting ? t.submitting : t.submit}
+      </button>
+    </form>
+  </div>
+)}
+
+
+<div className="history-section">
+  <h4>{t.statusHistory}</h4>
+  <ul className="history">
+    {history.map((h) => (
+      <li key={h.history_id}>
+        <strong>{tStatus(h.status)}</strong> – {h.notes || "—"} ({new Date(h.updated_on).toLocaleString()})
+      </li>
+    ))}
+  </ul>
+</div>
 
         <button onClick={onClose} className="close-btn">{t.close}</button>
       </motion.div>

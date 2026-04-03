@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import ReportIssue from "./ReportIssue";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import ReportIssue from "./ReportIssue";
 import Chatbot from "./chatbot";
 import "./UserDashboard.css";
 
@@ -11,8 +11,10 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 function UserDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState("report");
+  // ✅ States
+  const [activeTab, setActiveTab] = useState(location.state?.openTab || "report");
   const [complaints, setComplaints] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [user, setUser] = useState(null);
@@ -20,32 +22,31 @@ function UserDashboard() {
   const [language, setLanguage] = useState("en");
 
   // ✅ Translations
-  const translations = {
-    en: {
-      reportIssue: "Report Issue",
-      myComplaints: "My Complaints",
-      alertsTab: "Alerts",
-      logout: "Logout",
-      welcome: "Welcome",
-      noComplaints: "No complaints reported yet.",
-      noAlerts: "No active alerts",
-      importantAlerts: "Important Alerts",
-    },
-    kn: {
-      reportIssue: "ಸಮಸ್ಯೆ ವರದಿ ಮಾಡಿ",
-      myComplaints: "ನನ್ನ ದೂರುಗಳು",
-      alertsTab: "ಎಚ್ಚರಿಕೆಗಳು",
-      logout: "ಲಾಗ್ ಔಟ್",
-      welcome: "ಸ್ವಾಗತ",
-      noComplaints: "ಯಾವುದೇ ದೂರುಗಳನ್ನು ವರದಿ ಮಾಡಲಾಗಿಲ್ಲ.",
-      noAlerts: "ಯಾವುದೇ ಸಕ್ರಿಯ ಎಚ್ಚರಿಕೆಗಳಿಲ್ಲ",
-      importantAlerts: "ಮುಖ್ಯ ಎಚ್ಚರಿಕೆಗಳು",
-    },
-  };
+  const t =
+    {
+      en: {
+        reportIssue: "Report Issue",
+        myComplaints: "My Complaints",
+        alertsTab: "Alerts",
+        logout: "Logout",
+        welcome: "Welcome",
+        noComplaints: "No complaints reported yet.",
+        noAlerts: "No active alerts",
+        importantAlerts: "Important Alerts",
+      },
+      kn: {
+        reportIssue: "ಸಮಸ್ಯೆ ವರದಿ ಮಾಡಿ",
+        myComplaints: "ನನ್ನ ದೂರುಗಳು",
+        alertsTab: "ಎಚ್ಚರಿಕೆಗಳು",
+        logout: "ಲಾಗ್ ಔಟ್",
+        welcome: "ಸ್ವಾಗತ",
+        noComplaints: "ಯಾವುದೇ ದೂರುಗಳನ್ನು ವರದಿ ಮಾಡಲಾಗಿಲ್ಲ.",
+        noAlerts: "ಯಾವುದೇ ಸಕ್ರಿಯ ಎಚ್ಚರಿಕೆಗಳಿಲ್ಲ",
+        importantAlerts: "ಮುಖ್ಯ ಎಚ್ಚರಿಕೆಗಳು",
+      },
+    }[language || "en"];
 
-  const t = translations[language];
-
-  // ✅ Verify token & fetch user details
+  // ✅ Verify token and set user info
   useEffect(() => {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
@@ -74,34 +75,54 @@ function UserDashboard() {
   }, [navigate]);
 
   // ✅ Fetch complaints
-  const fetchComplaints = useCallback(() => {
+  const fetchComplaints = useCallback(async () => {
     if (!user) return;
     const token = localStorage.getItem("token");
-    axios
-      .get(`${API_URL}/user/${user.id}/complaints`, {
+    try {
+      const res = await axios.get(`${API_URL}/user/${user.id}/complaints`, {
         headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setComplaints(res.data))
-      .catch((err) => console.error("Error fetching complaints:", err));
+      });
+      setComplaints(res.data || []);
+    } catch (err) {
+      console.error("Error fetching complaints:", err.response?.data || err);
+      toast.error("Failed to load complaints");
+    }
   }, [user]);
 
   useEffect(() => {
-    if (activeTab === "complaints") fetchComplaints();
-  }, [activeTab, fetchComplaints]);
+    if (activeTab === "complaints" && user) {
+      fetchComplaints();
+    }
+  }, [activeTab, user, fetchComplaints]);
+
+  // ✅ Auto-refresh after complaint submission
+  const handleComplaintSubmitted = () => {
+    toast.success("✅ Complaint submitted successfully!");
+    setActiveTab("complaints");
+    fetchComplaints(); // instant refresh of My Complaints tab
+  };
 
   // ✅ Fetch alerts
-  useEffect(() => {
-    if (activeTab === "alerts") {
-      axios
-        .get(`${API_URL}/api/alerts`)
-        .then((res) => setAlerts(res.data))
-        .catch((err) => console.error("Error fetching alerts:", err));
+  const fetchAlerts = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await axios.get(`${API_URL}/alerts`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setAlerts(res.data || []);
+    } catch (err) {
+      console.error("Error fetching alerts:", err);
+      toast.error("Failed to load alerts");
     }
-  }, [activeTab]);
+  }, []);
 
-  // ✅ Format complaint status
-  const formatStatus = (status) =>
-    status.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  useEffect(() => {
+    if (activeTab === "alerts") fetchAlerts();
+  }, [activeTab, fetchAlerts]);
+
+  // ✅ Format status
+  const formatStatus = (status = "") =>
+    status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
   // ✅ Logout
   const handleLogout = () => {
@@ -117,7 +138,7 @@ function UserDashboard() {
     <div className="dashboard-container">
       <ToastContainer position="top-right" autoClose={3000} theme="colored" />
 
-      {/* ✅ Language Switcher → Top-Right Corner */}
+      {/* 🌍 Language Switch + Chatbot */}
       <div
         style={{
           position: "absolute",
@@ -133,32 +154,32 @@ function UserDashboard() {
         }}
       >
         <span
+          onClick={() => setLanguage("en")}
           style={{
             cursor: "pointer",
             fontWeight: language === "en" ? "bold" : "normal",
             marginRight: "8px",
             color: language === "en" ? "#007bff" : "#333",
           }}
-          onClick={() => setLanguage("en")}
         >
           English
         </span>
         |
         <span
+          onClick={() => setLanguage("kn")}
           style={{
             cursor: "pointer",
             fontWeight: language === "kn" ? "bold" : "normal",
             marginLeft: "8px",
             color: language === "kn" ? "#007bff" : "#333",
           }}
-          onClick={() => setLanguage("kn")}
         >
           ಕನ್ನಡ
         </span>
-        <Chatbot/>
+        <Chatbot />
       </div>
 
-      {/* Sidebar */}
+      {/* 🧭 Sidebar */}
       <div className="dashboard-sidebar">
         <div className="logo-container">
           <img
@@ -169,7 +190,6 @@ function UserDashboard() {
           <span>RuralEdge</span>
         </div>
 
-        {/* Navigation Buttons */}
         <button
           onClick={() => setActiveTab("report")}
           className={activeTab === "report" ? "active-tab" : ""}
@@ -189,7 +209,6 @@ function UserDashboard() {
           {t.alertsTab}
         </button>
 
-        {/* Logout Button */}
         <button
           onClick={handleLogout}
           style={{
@@ -208,16 +227,21 @@ function UserDashboard() {
         </button>
       </div>
 
-      {/* Dashboard Content */}
+      {/* 🖥️ Main Content */}
       <div className="dashboard-content card">
         <h2>
           {t.welcome}, {user.name} 👋
         </h2>
 
-        {/* Report Issue Tab */}
-        {activeTab === "report" && <ReportIssue language={language} />}
+        {/* 📝 Report Issue */}
+        {activeTab === "report" && (
+          <ReportIssue
+            language={language}
+            onComplaintSubmitted={handleComplaintSubmitted}
+          />
+        )}
 
-        {/* Complaints Tab */}
+        {/* 🧾 My Complaints */}
         {activeTab === "complaints" && (
           <div>
             <h2>{t.myComplaints}</h2>
@@ -241,7 +265,7 @@ function UserDashboard() {
                   {complaints.map((c) => (
                     <tr key={c.complaint_id}>
                       <td>{c.issue_type}</td>
-                      <td>{c.department_name}</td>
+                      <td>{c.department_name || "N/A"}</td>
                       <td
                         style={{
                           color:
@@ -258,12 +282,16 @@ function UserDashboard() {
                         {formatStatus(c.status)}
                       </td>
                       <td>{c.staff_name || "Not Assigned"}</td>
-                      <td>{c.location}</td>
-                      <td>{new Date(c.created_on).toLocaleString()}</td>
+                      <td>{c.location || "N/A"}</td>
                       <td>
-                        {c.photo_url ? (
+                        {c.created_on
+                          ? new Date(c.created_on).toLocaleString()
+                          : "—"}
+                      </td>
+                      <td>
+                        {c.photo_full_url ? (
                           <img
-                            src={`${API_URL}/uploads/${c.photo_url}`}
+                            src={c.photo_full_url}
                             alt="Complaint"
                             style={{
                               width: "80px",
@@ -278,9 +306,9 @@ function UserDashboard() {
                         )}
                       </td>
                       <td>
-                        {c.resolution_image ? (
+                        {c.resolution_full_url ? (
                           <img
-                            src={`${API_URL}/uploads/${c.resolution_image}`}
+                            src={c.resolution_full_url}
                             alt="Resolution"
                             style={{
                               width: "80px",
@@ -304,7 +332,7 @@ function UserDashboard() {
           </div>
         )}
 
-        {/* Alerts Tab */}
+        {/* 🚨 Alerts */}
         {activeTab === "alerts" && (
           <div>
             <h2>{t.importantAlerts}</h2>
@@ -312,9 +340,9 @@ function UserDashboard() {
               <p>{t.noAlerts}</p>
             ) : (
               <ul>
-                {alerts.map((alert) => (
-                  <li key={alert.alert_id}>
-                    <b>{alert.title}</b> - {alert.message}
+                {alerts.map((a) => (
+                  <li key={a.alert_id}>
+                    <b>{a.title}</b> - {a.message}
                   </li>
                 ))}
               </ul>
